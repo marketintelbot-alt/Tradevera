@@ -1,9 +1,11 @@
+import { useEffect, useRef } from "react";
 import { ArrowRight, Check, Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
 import { MarketingNav } from "@/components/layout/MarketingNav";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { useTheme } from "@/context/ThemeContext";
 
 const features = [
   "Fast trade capture with quick-add and advanced forms",
@@ -15,6 +17,24 @@ const features = [
 ];
 
 export function LandingPage() {
+  const { theme, setTheme } = useTheme();
+  const previousThemeRef = useRef<"light" | "dark" | null>(null);
+
+  useEffect(() => {
+    previousThemeRef.current = theme;
+    if (theme !== "light") {
+      setTheme("light");
+    }
+
+    return () => {
+      if (previousThemeRef.current === "dark") {
+        setTheme("dark");
+      }
+    };
+    // Intentionally run once on page mount/unmount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
     <div className="min-h-screen">
       <MarketingNav />
