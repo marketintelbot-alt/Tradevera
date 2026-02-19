@@ -2,7 +2,6 @@ services:
   - type: web
     name: tradevera-web
     runtime: static
-    plan: free
     buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm -C apps/web build
     staticPublishPath: apps/web/dist
     envVars:
