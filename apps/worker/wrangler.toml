@@ -6,7 +6,6 @@ workers_dev = true
 [vars]
 FRONTEND_ORIGIN = "https://tradevera-web.onrender.com"
 APP_URL = "https://tradevera-web.onrender.com"
-ALLOW_MAGIC_LINK_IN_RESPONSE = "true"
 
 [[d1_databases]]
 binding = "DB"
