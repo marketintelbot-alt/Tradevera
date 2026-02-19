@@ -14,6 +14,55 @@ Tradevera is a production-ready trading journal SaaS MVP with:
 - PWA install support + mobile quick-add action
 - Premium React/Tailwind UI
 
+## Tonight Go-Live (Fast Path)
+
+If your goal is "ready for sales tonight", do these in order:
+
+1. Render: sync latest commit and redeploy
+- Repo: `marketintelbot-alt/Tradevera`
+- Latest commit: `5c6d235`
+- Env var on Render static site:
+  - `VITE_API_BASE_URL=https://tradevera-worker.tradevera.workers.dev`
+
+2. Cloudflare Worker vars/secrets (production)
+- Worker: `tradevera-worker`
+- Vars:
+  - `FRONTEND_ORIGIN=https://tradevera-web.onrender.com`
+  - `APP_URL=https://tradevera-web.onrender.com`
+- Secrets:
+  - `JWT_SECRET`
+  - `STRIPE_SECRET_KEY` (live)
+  - `STRIPE_WEBHOOK_SECRET`
+  - `STRIPE_PRICE_ID_PRO`
+  - `RESEND_API_KEY`
+  - `RESEND_FROM`
+  - `SUPPORT_EMAIL`
+- Keep `ALLOW_MAGIC_LINK_IN_RESPONSE` unset or `false` in production.
+
+3. Resend sender must be verified
+- `RESEND_FROM` must be a verified domain sender (not Gmail).
+- If this is not set correctly, `/auth/request-link` returns `502` and login emails fail.
+
+4. Stripe webhook (required for automatic Pro unlock/downgrade)
+- Endpoint:
+  - `https://tradevera-worker.tradevera.workers.dev/api/stripe/webhook`
+- Events:
+  - `checkout.session.completed`
+  - `customer.subscription.created`
+  - `customer.subscription.updated`
+  - `customer.subscription.deleted`
+
+5. Google AdSense on Free plan only
+- Already enforced in UI:
+  - Ads render only for `user.plan === "free"`.
+  - Ads render only on dashboard/trades pages.
+  - Ads do not render in trade entry forms.
+- Set Render env vars and redeploy:
+  - `VITE_ADSENSE_CLIENT_ID=ca-pub-...`
+  - `VITE_ADSENSE_SLOT_DASHBOARD=...`
+  - `VITE_ADSENSE_SLOT_TRADES=...`
+  - `VITE_ADSENSE_SLOT_FOOTER=...` (optional)
+
 ## Monorepo Structure
 
 ```txt
