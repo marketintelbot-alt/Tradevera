@@ -6,8 +6,6 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 WORKER_DIR="${ROOT_DIR}/apps/worker"
 
 required_env=(
-  CLOUDFLARE_API_TOKEN
-  CLOUDFLARE_ACCOUNT_ID
   JWT_SECRET
   STRIPE_SECRET_KEY
   STRIPE_WEBHOOK_SECRET
@@ -25,6 +23,11 @@ for key in "${required_env[@]}"; do
     exit 1
   fi
 done
+
+if [[ -z "${CLOUDFLARE_API_TOKEN:-}" ]]; then
+  echo "CLOUDFLARE_API_TOKEN not set. Using Wrangler OAuth session..."
+  npx wrangler whoami >/dev/null
+fi
 
 put_secret() {
   local key="$1"
