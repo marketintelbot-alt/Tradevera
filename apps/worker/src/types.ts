@@ -4,7 +4,9 @@ export interface Env {
   JWT_SECRET: string;
   STRIPE_SECRET_KEY: string;
   STRIPE_WEBHOOK_SECRET: string;
-  STRIPE_PRICE_ID_PRO: string;
+  STRIPE_PRICE_ID_PRO?: string;
+  STRIPE_PRICE_PRO?: string;
+  STRIPE_PRICE_STARTER?: string;
   RESEND_API_KEY: string;
   RESEND_FROM: string;
   APP_URL: string;

@@ -17,6 +17,10 @@ interface StripeEvent {
   };
 }
 
+function resolveProPriceId(env: AppEnv["Bindings"]): string | null {
+  return env.STRIPE_PRICE_ID_PRO ?? env.STRIPE_PRICE_PRO ?? null;
+}
+
 async function findUserIdForEvent(
   c: import("hono").Context<AppEnv>,
   options: { hintUserId?: string | null; hintEmail?: string | null; customerId?: string | null }
@@ -128,7 +132,7 @@ async function handleCheckoutCompleted(c: import("hono").Context<AppEnv>, event:
 
   const subscriptionId = session.subscription;
   const customerId = session.customer;
-  const priceId = session.metadata?.price_id ?? c.env.STRIPE_PRICE_ID_PRO;
+  const priceId = session.metadata?.price_id ?? resolveProPriceId(c.env);
 
   if (subscriptionId && customerId) {
     await upsertSubscription(c, {
@@ -136,7 +140,7 @@ async function handleCheckoutCompleted(c: import("hono").Context<AppEnv>, event:
       userId,
       customerId,
       status: "active",
-      priceId,
+      priceId: priceId ?? "unknown",
       currentPeriodEnd: null
     });
   }
@@ -174,7 +178,7 @@ async function handleSubscriptionUpdated(
     return;
   }
 
-  const priceId = subscription.items?.data?.[0]?.price?.id ?? c.env.STRIPE_PRICE_ID_PRO;
+  const priceId = subscription.items?.data?.[0]?.price?.id ?? resolveProPriceId(c.env) ?? "unknown";
   const currentPeriodEnd = subscription.current_period_end ? new Date(subscription.current_period_end * 1000).toISOString() : null;
 
   await upsertSubscription(c, {
@@ -203,7 +207,11 @@ export function registerStripeRoutes(app: Hono<AppEnv>) {
       return c.json({ error: "Invalid checkout request" }, 400);
     }
 
-    const priceId = parsed.data.priceId ?? c.env.STRIPE_PRICE_ID_PRO;
+    const defaultProPriceId = resolveProPriceId(c.env);
+    const priceId = parsed.data.priceId ?? defaultProPriceId;
+    if (!priceId) {
+      return c.json({ error: "Missing Stripe Pro price id configuration" }, 500);
+    }
     const appUrl = c.env.APP_URL.endsWith("/") ? c.env.APP_URL.slice(0, -1) : c.env.APP_URL;
 
     try {
