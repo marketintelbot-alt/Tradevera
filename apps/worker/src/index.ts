@@ -16,11 +16,33 @@ const FREE_READ_ONLY_ROUTES = new Set(["/api/trades", "/api/projects", "/api/tas
 
 const app = new Hono<AppEnv>();
 
-app.use("*", async (c, next) => {
-  const requestOrigin = c.req.header("Origin");
-  const allowedOrigins = c.env.FRONTEND_ORIGIN.split(",")
+function toOrigin(value: string | undefined): string | null {
+  const trimmed = (value ?? "").trim();
+  if (!trimmed) {
+    return null;
+  }
+  try {
+    return new URL(trimmed).origin;
+  } catch {
+    return null;
+  }
+}
+
+function resolveAllowedOrigins(frontendOriginVar: string, appUrlVar: string): string[] {
+  const fromFrontend = frontendOriginVar
+    .split(",")
     .map((origin) => origin.trim())
     .filter(Boolean);
+  const appOrigin = toOrigin(appUrlVar);
+  if (appOrigin && !fromFrontend.includes(appOrigin)) {
+    fromFrontend.push(appOrigin);
+  }
+  return fromFrontend;
+}
+
+app.use("*", async (c, next) => {
+  const requestOrigin = c.req.header("Origin");
+  const allowedOrigins = resolveAllowedOrigins(c.env.FRONTEND_ORIGIN, c.env.APP_URL);
 
   if (requestOrigin && allowedOrigins.includes(requestOrigin)) {
     c.header("Access-Control-Allow-Origin", requestOrigin);
