@@ -12,6 +12,8 @@ export function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
   const [debugLink, setDebugLink] = useState<string | null>(null);
+  const [delivery, setDelivery] = useState<"email" | "debug" | null>(null);
+  const [lastClickedAt, setLastClickedAt] = useState<string | null>(null);
   const { toast } = useToast();
   const { theme, setTheme } = useTheme();
   const previousThemeRef = useRef<"light" | "dark" | null>(null);
@@ -33,12 +35,17 @@ export function LoginPage() {
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
+    setLastClickedAt(new Date().toLocaleTimeString());
     setLoading(true);
+    setDebugLink(null);
+    setSent(false);
+    setDelivery(null);
 
     try {
       const result = await api.requestMagicLink(email);
       setSent(true);
       setDebugLink(result.magicLink ?? null);
+      setDelivery(result.delivery ?? null);
       toast({
         title: result.delivery === "debug" ? "Debug login link ready" : "Magic link sent",
         description:
@@ -55,6 +62,19 @@ export function LoginPage() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const copyDebugLink = async () => {
+    if (!debugLink) {
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(debugLink);
+      toast({ title: "Link copied", description: "Paste it into this browser to continue login.", tone: "success" });
+    } catch {
+      toast({ title: "Copy failed", description: "Select and copy the link manually.", tone: "error" });
     }
   };
 
@@ -75,12 +95,16 @@ export function LoginPage() {
             required
           />
 
-          <Button className="w-full" loading={loading}>
-            Send login link
+          <Button className="w-full" disabled={loading}>
+            {loading ? "Sending link..." : "Send login link"}
           </Button>
         </form>
 
-        {sent && !debugLink && (
+        {lastClickedAt && (
+          <p className="mt-3 text-xs text-ink-700">Request sent at {lastClickedAt}.</p>
+        )}
+
+        {sent && delivery === "email" && !debugLink && (
           <p className="mt-4 rounded-lg border border-mint-500/30 bg-mint-100 px-3 py-2 text-sm text-ink-900">
             Email sent. Open the link on this device to complete login.
           </p>
@@ -88,11 +112,18 @@ export function LoginPage() {
 
         {debugLink && (
           <div className="mt-3 rounded-lg border border-amber-500/35 bg-amber-100 px-3 py-3 text-sm text-ink-900">
-            <p className="font-semibold">Local debug link</p>
-            <p className="mt-1 text-xs text-ink-800">Use this only for local testing.</p>
+            <p className="font-semibold">Instant login link (email fallback)</p>
+            <p className="mt-1 text-xs text-ink-800">
+              Email delivery is currently restricted. Use this one-time secure link to log in now.
+            </p>
             <a className="mt-2 inline-block break-all font-medium underline" href={debugLink}>
               {debugLink}
             </a>
+            <div className="mt-2">
+              <Button size="sm" variant="secondary" onClick={copyDebugLink}>
+                Copy link
+              </Button>
+            </div>
           </div>
         )}
 
