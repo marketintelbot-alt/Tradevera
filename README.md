@@ -38,6 +38,8 @@ If your goal is "ready for sales tonight", do these in order:
   - `RESEND_FROM`
   - `SUPPORT_EMAIL`
 - Keep `ALLOW_MAGIC_LINK_IN_RESPONSE` unset or `false` in production.
+- Optional one-command deploy from terminal:
+  - `bash scripts/deploy-worker-prod.sh` (after exporting required env vars listed in the script)
 
 3. Resend sender must be verified
 - `RESEND_FROM` must be a verified domain sender (not Gmail).
