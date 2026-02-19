@@ -183,6 +183,8 @@ VITE_ADSENSE_SLOT_TRADES=<slot-id>
 VITE_ADSENSE_SLOT_FOOTER=<optional-slot-id>
 ```
 
+Note: the code includes a default Tradevera AdSense publisher ID fallback. Setting `VITE_ADSENSE_CLIENT_ID` explicitly in Render env is still recommended.
+
 ### Worker (`apps/worker`)
 
 ```env
