@@ -1,4 +1,4 @@
-import { authRequestLinkSchema } from "@tradevera/shared";
+import { authConsumeSchema, authRequestLinkSchema } from "@tradevera/shared";
 import type { Context } from "hono";
 import type { AppEnv, AuthUser } from "./types";
 import { createUser, getUserByEmail, getUserById, incrementUserSessionVersion } from "./utils/db";
@@ -35,6 +35,54 @@ function shouldUseSecureCookie(requestUrl: string): boolean {
 
 function unauthorizedResponse(c: Context<AppEnv>) {
   return c.json({ error: "Unauthorized" }, 401);
+}
+
+async function consumeMagicLinkToken(c: Context<AppEnv>, token: string) {
+  const tokenHash = await sha256Hex(token);
+  const tokenRow = await c.env.DB
+    .prepare("SELECT token_hash, user_email, expires_at, used FROM login_tokens WHERE token_hash = ? LIMIT 1")
+    .bind(tokenHash)
+    .first<LoginTokenRow>();
+
+  if (!tokenRow || tokenRow.used !== 0 || tokenRow.expires_at <= nowIso()) {
+    return c.json({ error: "Login token is invalid or expired" }, 400);
+  }
+
+  const markUsedResult = await c.env.DB
+    .prepare("UPDATE login_tokens SET used = 1 WHERE token_hash = ? AND used = 0")
+    .bind(tokenHash)
+    .run();
+
+  if (!markUsedResult.success || Number(markUsedResult.meta.changes ?? 0) < 1) {
+    return c.json({ error: "Login token already used" }, 400);
+  }
+
+  let user = await getUserByEmail(c.env.DB, tokenRow.user_email);
+  if (!user) {
+    user = await createUser(c.env.DB, tokenRow.user_email);
+  }
+
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  const sessionToken = await signJwt(
+    {
+      sub: user.id,
+      email: user.email,
+      session_version: user.session_version,
+      iat: nowSeconds,
+      exp: nowSeconds + SESSION_MAX_AGE_SECONDS
+    },
+    c.env.JWT_SECRET
+  );
+
+  c.header(
+    "Set-Cookie",
+    createSessionCookie(SESSION_COOKIE_NAME, sessionToken, {
+      secure: shouldUseSecureCookie(c.req.url),
+      maxAgeSeconds: SESSION_MAX_AGE_SECONDS
+    })
+  );
+
+  return c.json({ success: true, redirectTo: "/app/dashboard" });
 }
 
 export async function authenticateRequest(c: Context<AppEnv>): Promise<AuthUser | null> {
@@ -128,57 +176,22 @@ export function registerAuthRoutes(app: import("hono").Hono<AppEnv>) {
     return c.json({ success: true, message: "Magic link sent", delivery: "email", requestId });
   });
 
+  app.post("/auth/consume", async (c) => {
+    const parsedBody = authConsumeSchema.safeParse(await c.req.json().catch(() => null));
+    if (!parsedBody.success) {
+      return c.json({ error: "Missing token" }, 400);
+    }
+
+    return consumeMagicLinkToken(c, parsedBody.data.token);
+  });
+
   app.get("/auth/consume", async (c) => {
     const token = c.req.query("token");
     if (!token) {
       return c.json({ error: "Missing token" }, 400);
     }
 
-    const tokenHash = await sha256Hex(token);
-    const tokenRow = await c.env.DB
-      .prepare("SELECT token_hash, user_email, expires_at, used FROM login_tokens WHERE token_hash = ? LIMIT 1")
-      .bind(tokenHash)
-      .first<LoginTokenRow>();
-
-    if (!tokenRow || tokenRow.used !== 0 || tokenRow.expires_at <= nowIso()) {
-      return c.json({ error: "Login token is invalid or expired" }, 400);
-    }
-
-    const markUsedResult = await c.env.DB
-      .prepare("UPDATE login_tokens SET used = 1 WHERE token_hash = ? AND used = 0")
-      .bind(tokenHash)
-      .run();
-
-    if (!markUsedResult.success || Number(markUsedResult.meta.changes ?? 0) < 1) {
-      return c.json({ error: "Login token already used" }, 400);
-    }
-
-    let user = await getUserByEmail(c.env.DB, tokenRow.user_email);
-    if (!user) {
-      user = await createUser(c.env.DB, tokenRow.user_email);
-    }
-
-    const nowSeconds = Math.floor(Date.now() / 1000);
-    const sessionToken = await signJwt(
-      {
-        sub: user.id,
-        email: user.email,
-        session_version: user.session_version,
-        iat: nowSeconds,
-        exp: nowSeconds + SESSION_MAX_AGE_SECONDS
-      },
-      c.env.JWT_SECRET
-    );
-
-    c.header(
-      "Set-Cookie",
-      createSessionCookie(SESSION_COOKIE_NAME, sessionToken, {
-        secure: shouldUseSecureCookie(c.req.url),
-        maxAgeSeconds: SESSION_MAX_AGE_SECONDS
-      })
-    );
-
-    return c.json({ success: true, redirectTo: "/app/dashboard" });
+    return consumeMagicLinkToken(c, token);
   });
 
   app.post("/api/logout", async (c) => {

@@ -88,8 +88,9 @@ export const api = {
   },
 
   async consumeMagicLink(token: string): Promise<{ success: boolean; redirectTo?: string }> {
-    return request(`/auth/consume?token=${encodeURIComponent(token)}`, {
-      method: "GET"
+    return request("/auth/consume", {
+      method: "POST",
+      body: JSON.stringify({ token })
     });
   },
 

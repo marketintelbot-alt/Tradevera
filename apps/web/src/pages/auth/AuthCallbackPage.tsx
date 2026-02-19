@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import { useMemo, useState } from "react";
+import { CheckCircle2, LockKeyhole, ShieldCheck } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -8,44 +9,67 @@ import { useAuth } from "@/context/AuthContext";
 export function AuthCallbackPage() {
   const [searchParams] = useSearchParams();
   const [error, setError] = useState<string | null>(null);
+  const [status, setStatus] = useState<"idle" | "loading">("idle");
   const navigate = useNavigate();
   const { refreshMe } = useAuth();
-  const handledRef = useRef(false);
+  const token = useMemo(() => searchParams.get("token"), [searchParams]);
 
-  useEffect(() => {
-    if (handledRef.current) {
-      return;
-    }
-    handledRef.current = true;
-
-    const token = searchParams.get("token");
+  const continueSignIn = async () => {
     if (!token) {
       setError("Missing login token.");
       return;
     }
 
-    (async () => {
-      try {
-        await api.consumeMagicLink(token);
-        await refreshMe();
-        navigate("/app/dashboard", { replace: true });
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Unable to authenticate with this link.");
-      }
-    })();
-  }, [navigate, refreshMe, searchParams]);
+    setError(null);
+    setStatus("loading");
+    try {
+      await api.consumeMagicLink(token);
+      await refreshMe();
+      navigate("/app/dashboard", { replace: true });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to authenticate with this link.");
+    } finally {
+      setStatus("idle");
+    }
+  };
 
   return (
     <div className="flex min-h-screen items-center justify-center px-4">
       <Card className="w-full max-w-md p-6">
-        <h1 className="text-xl font-semibold text-ink-900">Signing you in…</h1>
+        <div className="inline-flex items-center gap-2 rounded-full bg-ink-100 px-3 py-1 text-xs font-semibold text-ink-800">
+          <ShieldCheck className="h-3.5 w-3.5" />
+          Secure Login
+        </div>
+        <h1 className="mt-3 text-xl font-semibold text-ink-900">Confirm sign in</h1>
+        <p className="mt-2 text-sm text-ink-700">
+          Click below to finish your secure login. This prevents automated link scanners from burning your token.
+        </p>
         {error ? (
           <>
             <p className="mt-2 text-sm text-coral-500">{error}</p>
-            <Button className="mt-4" onClick={() => navigate("/login")}>Back to login</Button>
+            <div className="mt-4 flex gap-2">
+              <Button variant="secondary" onClick={() => navigate("/login")}>Request new link</Button>
+              <Button onClick={() => void continueSignIn()} loading={status === "loading"}>
+                Try again
+              </Button>
+            </div>
           </>
         ) : (
-          <p className="mt-2 text-sm text-ink-700">Completing secure session.</p>
+          <div className="mt-4 space-y-3">
+            <div className="rounded-lg border border-mint-500/30 bg-mint-100/55 px-3 py-2 text-xs text-ink-800">
+              <p className="inline-flex items-center gap-1">
+                <CheckCircle2 className="h-3.5 w-3.5 text-mint-500" />
+                Token detected and ready.
+              </p>
+            </div>
+            <Button type="button" className="w-full gap-2" onClick={() => void continueSignIn()} loading={status === "loading"}>
+              <LockKeyhole className="h-4 w-4" />
+              Continue secure sign-in
+            </Button>
+            <Button type="button" variant="ghost" className="w-full" onClick={() => navigate("/login")}>
+              Back to login
+            </Button>
+          </div>
         )}
       </Card>
     </div>
