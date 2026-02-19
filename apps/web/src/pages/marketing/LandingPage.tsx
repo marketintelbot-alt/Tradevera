@@ -21,13 +21,17 @@ export function LandingPage() {
   const previousThemeRef = useRef<"light" | "dark" | null>(null);
 
   useEffect(() => {
+    const root = document.documentElement;
     previousThemeRef.current = theme;
+    root.classList.remove("dark");
+
     if (theme !== "light") {
       setTheme("light");
     }
 
     return () => {
       if (previousThemeRef.current === "dark") {
+        root.classList.add("dark");
         setTheme("dark");
       }
     };

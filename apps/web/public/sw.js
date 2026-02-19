@@ -1,5 +1,5 @@
-const CACHE_NAME = "tradevera-shell-v1";
-const APP_SHELL = ["/", "/index.html", "/manifest.webmanifest"];
+const CACHE_NAME = "tradevera-shell-v2";
+const APP_SHELL = ["/index.html", "/manifest.webmanifest"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -37,18 +37,27 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  event.respondWith(
-    caches.match(event.request).then((cached) => {
-      if (cached) {
-        return cached;
-      }
-      return fetch(event.request)
+  const isNavigation = event.request.mode === "navigate";
+  if (isNavigation) {
+    event.respondWith(
+      fetch(event.request)
         .then((response) => {
           const responseClone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone)).catch(() => undefined);
+          caches.open(CACHE_NAME).then((cache) => cache.put("/index.html", responseClone)).catch(() => undefined);
           return response;
         })
-        .catch(() => caches.match("/index.html"));
-    })
+        .catch(() => caches.match("/index.html"))
+    );
+    return;
+  }
+
+  event.respondWith(
+    fetch(event.request)
+      .then((response) => {
+        const responseClone = response.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone)).catch(() => undefined);
+        return response;
+      })
+      .catch(() => caches.match(event.request).then((cached) => cached ?? caches.match("/index.html")))
   );
 });
