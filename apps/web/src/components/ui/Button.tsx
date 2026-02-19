@@ -2,7 +2,7 @@ import { forwardRef } from "react";
 import type { ButtonHTMLAttributes } from "react";
 import { cn } from "@/lib/utils";
 
-type Variant = "primary" | "secondary" | "ghost" | "danger";
+type Variant = "primary" | "secondary" | "ghost" | "danger" | "success";
 type Size = "sm" | "md" | "lg";
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -27,6 +27,8 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
         variant === "secondary" && "border border-ink-200 bg-white text-ink-900 hover:bg-ink-100",
         variant === "ghost" && "text-ink-800 hover:bg-ink-100",
         variant === "danger" && "bg-coral-500 text-white hover:bg-coral-500/90",
+        variant === "success" &&
+          "bg-gradient-to-r from-mint-500 to-emerald-500 text-white shadow-[0_12px_30px_-12px_rgba(16,185,129,0.75)] hover:brightness-105",
         className
       )}
       type={type ?? "button"}
