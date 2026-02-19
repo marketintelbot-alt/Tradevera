@@ -1,0 +1,13 @@
+{
+  "name": "tradevera",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@9.15.4",
+  "scripts": {
+    "build": "pnpm -r build",
+    "dev:web": "pnpm -C apps/web dev",
+    "dev:worker": "pnpm -C apps/worker dev",
+    "typecheck": "pnpm -r typecheck",
+    "lint": "pnpm -r lint"
+  }
+}

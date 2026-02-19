@@ -1,0 +1,14 @@
+name = "tradevera-worker"
+main = "src/index.ts"
+compatibility_date = "2025-02-15"
+workers_dev = true
+
+[vars]
+FRONTEND_ORIGIN = "http://localhost:5173"
+APP_URL = "http://localhost:5173"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "tradevera"
+database_id = "c1356677-73ba-49b8-9cc3-b385197d207b"
+migrations_dir = "migrations"
