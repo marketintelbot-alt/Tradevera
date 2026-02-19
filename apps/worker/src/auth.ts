@@ -18,6 +18,16 @@ export const SESSION_COOKIE_NAME = "tv_session";
 const MAGIC_LINK_EXPIRY_MINUTES = 15;
 const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 30;
 
+function maskEmailForLogs(email: string): string {
+  const [localPart, domainPart] = email.split("@");
+  if (!localPart || !domainPart) {
+    return "***";
+  }
+
+  const visiblePrefix = localPart.slice(0, 2);
+  return `${visiblePrefix}***@${domainPart}`;
+}
+
 function shouldUseSecureCookie(requestUrl: string): boolean {
   const protocol = new URL(requestUrl).protocol;
   return protocol === "https:";
@@ -93,8 +103,14 @@ export function registerAuthRoutes(app: import("hono").Hono<AppEnv>) {
     const allowMagicLinkInResponse =
       isTruthyEnv(c.env.ALLOW_MAGIC_LINK_IN_RESPONSE) || requestHost === "localhost" || requestHost === "127.0.0.1";
 
+    let requestId: string | undefined;
     try {
-      await sendMagicLinkEmail(c.env, email, magicLink);
+      const delivery = await sendMagicLinkEmail(c.env, email, magicLink);
+      requestId = delivery.id;
+      console.info("magic_link_email_sent", {
+        email: maskEmailForLogs(email),
+        requestId: delivery.id
+      });
     } catch (error) {
       console.error("Failed to send magic link email", error);
       if (allowMagicLinkInResponse) {
@@ -109,7 +125,7 @@ export function registerAuthRoutes(app: import("hono").Hono<AppEnv>) {
       return c.json({ error: "Unable to send login email right now" }, 502);
     }
 
-    return c.json({ success: true, message: "Magic link sent", delivery: "email" });
+    return c.json({ success: true, message: "Magic link sent", delivery: "email", requestId });
   });
 
   app.get("/auth/consume", async (c) => {

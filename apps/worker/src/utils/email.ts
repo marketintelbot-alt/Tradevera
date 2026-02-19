@@ -8,7 +8,11 @@ interface ResendPayload {
   text: string;
 }
 
-async function sendResendEmail(env: Env, payload: ResendPayload): Promise<void> {
+interface ResendSendResponse {
+  id: string;
+}
+
+async function sendResendEmail(env: Env, payload: ResendPayload): Promise<ResendSendResponse> {
   if (!env.RESEND_API_KEY || !env.RESEND_FROM) {
     throw new Error("Resend env is missing RESEND_API_KEY or RESEND_FROM");
   }
@@ -26,9 +30,16 @@ async function sendResendEmail(env: Env, payload: ResendPayload): Promise<void> 
     const errorBody = await response.text();
     throw new Error(`Resend request failed: ${response.status} ${errorBody}`);
   }
+
+  const parsed = (await response.json().catch(() => null)) as Partial<ResendSendResponse> | null;
+  if (!parsed?.id || typeof parsed.id !== "string") {
+    throw new Error("Resend request succeeded but no message id was returned");
+  }
+
+  return { id: parsed.id };
 }
 
-export async function sendMagicLinkEmail(env: Env, to: string, magicLink: string): Promise<void> {
+export async function sendMagicLinkEmail(env: Env, to: string, magicLink: string): Promise<ResendSendResponse> {
   const subject = "Your Tradevera login link";
   const text = `Open this secure link to sign in: ${magicLink}\n\nThis link expires in 15 minutes.`;
   const html = `
@@ -40,7 +51,7 @@ export async function sendMagicLinkEmail(env: Env, to: string, magicLink: string
     </div>
   `;
 
-  await sendResendEmail(env, {
+  return sendResendEmail(env, {
     from: env.RESEND_FROM,
     to: [to],
     subject,
@@ -49,7 +60,7 @@ export async function sendMagicLinkEmail(env: Env, to: string, magicLink: string
   });
 }
 
-export async function sendProWelcomeEmail(env: Env, to: string): Promise<void> {
+export async function sendProWelcomeEmail(env: Env, to: string): Promise<ResendSendResponse> {
   const supportEmail = env.SUPPORT_EMAIL ?? "support@tradevera.app";
   const subject = "Welcome to Tradevera Pro";
   const text = `Welcome to Tradevera Pro.\n\nStart here: ${env.APP_URL}/app/dashboard\nWeekly review: ${env.APP_URL}/app/review\nTools: ${env.APP_URL}/app/tools\n\nNeed help? ${supportEmail}`;
@@ -67,7 +78,7 @@ export async function sendProWelcomeEmail(env: Env, to: string): Promise<void> {
     </div>
   `;
 
-  await sendResendEmail(env, {
+  return sendResendEmail(env, {
     from: env.RESEND_FROM,
     to: [to],
     subject,

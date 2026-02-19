@@ -78,7 +78,9 @@ function queryString(params: Record<string, string | undefined>): string {
 }
 
 export const api = {
-  async requestMagicLink(email: string): Promise<{ success: boolean; message: string; magicLink?: string; delivery?: "email" | "debug" }> {
+  async requestMagicLink(
+    email: string
+  ): Promise<{ success: boolean; message: string; magicLink?: string; delivery?: "email" | "debug"; requestId?: string }> {
     return request("/auth/request-link", {
       method: "POST",
       body: JSON.stringify({ email })

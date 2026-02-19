@@ -19,7 +19,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
     <button
       ref={ref}
       className={cn(
-        "inline-flex items-center justify-center rounded-lg font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-700/40 disabled:cursor-not-allowed disabled:opacity-60",
+        "inline-flex items-center justify-center gap-2 rounded-lg font-semibold transition active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-700/40 disabled:cursor-not-allowed disabled:opacity-60",
         size === "sm" && "h-9 px-3 text-sm",
         size === "md" && "h-10 px-4 text-sm",
         size === "lg" && "h-12 px-5 text-base",
@@ -31,9 +31,16 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       )}
       type={type ?? "button"}
       disabled={disabled || loading}
+      aria-busy={loading || undefined}
       {...props}
     >
-      {loading ? "Loading..." : children}
+      {loading && (
+        <span
+          className="h-4 w-4 animate-spin rounded-full border-2 border-current border-r-transparent"
+          aria-hidden="true"
+        />
+      )}
+      {loading ? "Processing..." : children}
     </button>
   );
 });

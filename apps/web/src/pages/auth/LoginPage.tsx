@@ -12,6 +12,7 @@ export function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
   const [debugLink, setDebugLink] = useState<string | null>(null);
+  const [requestId, setRequestId] = useState<string | null>(null);
   const [delivery, setDelivery] = useState<"email" | "debug" | null>(null);
   const [lastClickedAt, setLastClickedAt] = useState<string | null>(null);
   const { toast } = useToast();
@@ -38,6 +39,7 @@ export function LoginPage() {
     setLastClickedAt(new Date().toLocaleTimeString());
     setLoading(true);
     setDebugLink(null);
+    setRequestId(null);
     setSent(false);
     setDelivery(null);
 
@@ -45,6 +47,7 @@ export function LoginPage() {
       const result = await api.requestMagicLink(email);
       setSent(true);
       setDebugLink(result.magicLink ?? null);
+      setRequestId(result.requestId ?? null);
       setDelivery(result.delivery ?? null);
       toast({
         title: result.delivery === "debug" ? "Debug login link ready" : "Magic link sent",
@@ -95,19 +98,21 @@ export function LoginPage() {
             required
           />
 
-          <Button className="w-full" disabled={loading}>
-            {loading ? "Sending link..." : "Send login link"}
+          <Button className="w-full" loading={loading}>
+            Send login link
           </Button>
         </form>
 
         {lastClickedAt && (
-          <p className="mt-3 text-xs text-ink-700">Request sent at {lastClickedAt}.</p>
+          <p className="mt-3 text-xs text-ink-700">Button clicked at {lastClickedAt}.</p>
         )}
 
         {sent && delivery === "email" && !debugLink && (
-          <p className="mt-4 rounded-lg border border-mint-500/30 bg-mint-100 px-3 py-2 text-sm text-ink-900">
-            Email sent. Open the link on this device to complete login.
-          </p>
+          <div className="mt-4 rounded-lg border border-mint-500/30 bg-mint-100 px-3 py-2 text-sm text-ink-900">
+            <p>Email request accepted. Open the link on this device to complete login.</p>
+            {requestId && <p className="mt-1 text-xs text-ink-700">Delivery ID: {requestId}</p>}
+            <p className="mt-1 text-xs text-ink-700">If it does not arrive in 2 minutes, click Send login link again.</p>
+          </div>
         )}
 
         {debugLink && (
