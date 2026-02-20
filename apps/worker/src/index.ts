@@ -49,7 +49,7 @@ app.use("*", async (c, next) => {
     c.header("Access-Control-Allow-Origin", requestOrigin);
     c.header("Access-Control-Allow-Credentials", "true");
     c.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
-    c.header("Access-Control-Allow-Headers", "Content-Type, Stripe-Signature");
+    c.header("Access-Control-Allow-Headers", "Content-Type, Authorization, Stripe-Signature");
     c.header("Vary", "Origin");
   }
 

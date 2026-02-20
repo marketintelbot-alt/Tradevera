@@ -45,7 +45,7 @@ export function AuthCallbackPage() {
       const consumeResult = await api.consumeMagicLink(token);
       const me = await verifySessionWithRetry();
       if (!me) {
-        throw new Error("Session cookie was blocked by your browser. Disable third-party cookie blocking for this site and try again.");
+        throw new Error("Unable to establish a login session. Request a fresh link and try again.");
       }
       await refreshMe();
       if (consumeResult.temporaryPassword) {
@@ -94,7 +94,7 @@ export function AuthCallbackPage() {
               </Button>
             </div>
             <p className="mt-2 text-xs text-ink-700">
-              If this repeats, disable third-party cookie blocking for this site or use a custom domain for both app and API.
+              If this repeats, request a fresh link and try again in this same browser tab.
             </p>
           </>
         ) : (

@@ -83,7 +83,11 @@ async function ensureLifetimePro(c: Context<AppEnv>, user: UserRow): Promise<Use
   };
 }
 
-async function setSessionCookie(c: Context<AppEnv>, user: UserRow): Promise<void> {
+function shouldIncludeSessionFallbackToken(c: Context<AppEnv>): boolean {
+  return sessionSameSite(c.req.url, c.req.header("Origin")) === "None";
+}
+
+async function setSessionCookie(c: Context<AppEnv>, user: UserRow): Promise<string> {
   const nowSeconds = Math.floor(Date.now() / 1000);
   const sessionToken = await signJwt(
     {
@@ -106,6 +110,8 @@ async function setSessionCookie(c: Context<AppEnv>, user: UserRow): Promise<void
       maxAgeSeconds: SESSION_MAX_AGE_SECONDS
     })
   );
+
+  return sessionToken;
 }
 
 interface ProvisionPasswordResult {
@@ -242,18 +248,23 @@ async function consumeMagicLinkToken(c: Context<AppEnv>, token: string) {
 
   user = await ensureLifetimePro(c, user);
   const passwordResult = await provisionPasswordForUser(c, user);
-  await setSessionCookie(c, user);
+  const sessionToken = await setSessionCookie(c, user);
+  const includeFallbackToken = shouldIncludeSessionFallbackToken(c);
 
   return c.json({
     success: true,
     redirectTo: "/app/dashboard",
-    ...passwordResult
+    ...passwordResult,
+    ...(includeFallbackToken ? { sessionToken, sessionAuthMode: "bearer" } : {})
   });
 }
 
 export async function authenticateRequest(c: Context<AppEnv>): Promise<AuthUser | null> {
   const cookieHeader = c.req.header("Cookie");
-  const sessionToken = parseCookie(cookieHeader, SESSION_COOKIE_NAME);
+  const authorizationHeader = c.req.header("Authorization");
+  const bearerToken =
+    authorizationHeader && authorizationHeader.startsWith("Bearer ") ? authorizationHeader.slice("Bearer ".length).trim() : null;
+  const sessionToken = parseCookie(cookieHeader, SESSION_COOKIE_NAME) ?? bearerToken;
   if (!sessionToken) {
     return null;
   }
@@ -367,8 +378,13 @@ export function registerAuthRoutes(app: import("hono").Hono<AppEnv>) {
     }
 
     const user = await ensureLifetimePro(c, existing);
-    await setSessionCookie(c, user);
-    return c.json({ success: true, redirectTo: "/app/dashboard" });
+    const sessionToken = await setSessionCookie(c, user);
+    const includeFallbackToken = shouldIncludeSessionFallbackToken(c);
+    return c.json({
+      success: true,
+      redirectTo: "/app/dashboard",
+      ...(includeFallbackToken ? { sessionToken, sessionAuthMode: "bearer" } : {})
+    });
   });
 
   app.post("/auth/request-password", async (c) => {

@@ -14,6 +14,57 @@ import type {
 } from "@tradevera/shared";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8787";
+const SESSION_FALLBACK_STORAGE_KEY = "tradevera_session_fallback";
+
+let cachedSessionFallbackToken: string | null | undefined;
+
+function getSessionFallbackToken(): string | null {
+  if (cachedSessionFallbackToken !== undefined) {
+    return cachedSessionFallbackToken;
+  }
+
+  if (typeof window === "undefined") {
+    cachedSessionFallbackToken = null;
+    return cachedSessionFallbackToken;
+  }
+
+  try {
+    const stored = window.localStorage.getItem(SESSION_FALLBACK_STORAGE_KEY);
+    cachedSessionFallbackToken = stored && stored.trim().length > 0 ? stored.trim() : null;
+  } catch {
+    cachedSessionFallbackToken = null;
+  }
+
+  return cachedSessionFallbackToken;
+}
+
+function setSessionFallbackToken(token: string | null) {
+  cachedSessionFallbackToken = token && token.trim().length > 0 ? token.trim() : null;
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    if (cachedSessionFallbackToken) {
+      window.localStorage.setItem(SESSION_FALLBACK_STORAGE_KEY, cachedSessionFallbackToken);
+    } else {
+      window.localStorage.removeItem(SESSION_FALLBACK_STORAGE_KEY);
+    }
+  } catch {
+    // Ignore storage failures in private mode / restricted browsers.
+  }
+}
+
+function hydrateSessionFallbackToken(payload: unknown) {
+  if (!payload || typeof payload !== "object" || !("sessionToken" in payload)) {
+    return;
+  }
+
+  const token = (payload as { sessionToken?: unknown }).sessionToken;
+  if (typeof token === "string" && token.trim().length > 0) {
+    setSessionFallbackToken(token);
+  }
+}
 
 export class ApiError extends Error {
   status: number;
@@ -27,19 +78,30 @@ export class ApiError extends Error {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const headers = new Headers(init?.headers ?? {});
+  if (!(init?.body instanceof FormData) && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
+
+  const fallbackToken = getSessionFallbackToken();
+  if (fallbackToken && !headers.has("Authorization")) {
+    headers.set("Authorization", `Bearer ${fallbackToken}`);
+  }
+
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...init,
     credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      ...(init?.headers ?? {})
-    }
+    headers
   });
 
   const isJson = response.headers.get("Content-Type")?.includes("application/json");
   const data = isJson ? await response.json() : await response.text();
+  hydrateSessionFallbackToken(data);
 
   if (!response.ok) {
+    if (response.status === 401) {
+      setSessionFallbackToken(null);
+    }
     const message = typeof data === "object" && data && "error" in data ? String((data as { error: string }).error) : response.statusText;
     throw new ApiError(message, response.status, data);
   }
@@ -93,6 +155,8 @@ export const api = {
     passwordProvisioned?: boolean;
     passwordDelivery?: "email" | "debug" | null;
     temporaryPassword?: string;
+    sessionToken?: string;
+    sessionAuthMode?: "bearer";
   }> {
     return request("/auth/consume", {
       method: "POST",
@@ -100,7 +164,10 @@ export const api = {
     });
   },
 
-  async loginWithPassword(email: string, password: string): Promise<{ success: boolean; redirectTo?: string }> {
+  async loginWithPassword(
+    email: string,
+    password: string
+  ): Promise<{ success: boolean; redirectTo?: string; sessionToken?: string; sessionAuthMode?: "bearer" }> {
     return request("/auth/login-password", {
       method: "POST",
       body: JSON.stringify({ email, password })
@@ -117,7 +184,11 @@ export const api = {
   },
 
   async logout(): Promise<{ success: boolean }> {
-    return request("/api/logout", { method: "POST" });
+    try {
+      return await request("/api/logout", { method: "POST" });
+    } finally {
+      setSessionFallbackToken(null);
+    }
   },
 
   async me(): Promise<MeResponse> {

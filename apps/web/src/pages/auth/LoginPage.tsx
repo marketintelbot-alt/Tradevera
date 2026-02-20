@@ -123,7 +123,7 @@ export function LoginPage() {
       await api.loginWithPassword(normalizedEmail, password);
       const me = await api.me().catch(() => null);
       if (!me?.user?.id) {
-        throw new Error("Session cookie was blocked by your browser. Disable third-party cookie blocking for this site and try again.");
+        throw new Error("Unable to establish a login session. Please try again.");
       }
       await refreshMe();
       toast({
