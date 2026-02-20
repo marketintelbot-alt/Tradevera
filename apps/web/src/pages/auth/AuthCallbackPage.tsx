@@ -16,7 +16,18 @@ export function AuthCallbackPage() {
   const token = useMemo(() => searchParams.get("token"), [searchParams]);
   const hasToken = Boolean(token && token.trim().length > 0);
 
-  const verifySessionWithRetry = async () => {
+  const verifySessionWithRetry = async (sessionToken?: string) => {
+    if (sessionToken) {
+      try {
+        const meWithToken = await api.meWithSessionToken(sessionToken);
+        if (meWithToken?.user?.id) {
+          return meWithToken;
+        }
+      } catch {
+        // Fall through to standard retry path.
+      }
+    }
+
     const attempts = 4;
     for (let index = 0; index < attempts; index += 1) {
       try {
@@ -43,7 +54,7 @@ export function AuthCallbackPage() {
     setTemporaryPassword(null);
     try {
       const consumeResult = await api.consumeMagicLink(token);
-      const me = await verifySessionWithRetry();
+      const me = await verifySessionWithRetry(consumeResult.sessionToken);
       if (!me) {
         throw new Error("Unable to establish a login session. Request a fresh link and try again.");
       }

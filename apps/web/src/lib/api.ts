@@ -91,11 +91,19 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...init,
     credentials: "include",
-    headers
+    headers,
+    cache: "no-store"
   });
 
-  const isJson = response.headers.get("Content-Type")?.includes("application/json");
-  const data = isJson ? await response.json() : await response.text();
+  const rawBody = await response.text();
+  let data: unknown = rawBody;
+  if (rawBody.length > 0) {
+    try {
+      data = JSON.parse(rawBody);
+    } catch {
+      data = rawBody;
+    }
+  }
   hydrateSessionFallbackToken(data);
 
   if (!response.ok) {
@@ -158,19 +166,47 @@ export const api = {
     sessionToken?: string;
     sessionAuthMode?: "bearer";
   }> {
-    return request("/auth/consume", {
+    const response = await request<{
+      success: boolean;
+      redirectTo?: string;
+      passwordProvisioned?: boolean;
+      passwordDelivery?: "email" | "debug" | null;
+      temporaryPassword?: string;
+      sessionToken?: string;
+      sessionAuthMode?: "bearer";
+    }>("/auth/consume", {
       method: "POST",
       body: JSON.stringify({ token })
     });
+    if (response.sessionToken) {
+      setSessionFallbackToken(response.sessionToken);
+    }
+    return response;
   },
 
   async loginWithPassword(
     email: string,
     password: string
   ): Promise<{ success: boolean; redirectTo?: string; sessionToken?: string; sessionAuthMode?: "bearer" }> {
-    return request("/auth/login-password", {
-      method: "POST",
-      body: JSON.stringify({ email, password })
+    const response = await request<{ success: boolean; redirectTo?: string; sessionToken?: string; sessionAuthMode?: "bearer" }>(
+      "/auth/login-password",
+      {
+        method: "POST",
+        body: JSON.stringify({ email, password })
+      }
+    );
+    if (response.sessionToken) {
+      setSessionFallbackToken(response.sessionToken);
+    }
+    return response;
+  },
+
+  async meWithSessionToken(sessionToken: string): Promise<MeResponse> {
+    return request("/api/me", {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${sessionToken}`
+      }
     });
   },
 

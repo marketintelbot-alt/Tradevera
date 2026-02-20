@@ -16,13 +16,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const refreshMe = useCallback(async () => {
-    try {
-      const response = await api.me();
-      setUser(response.user);
-    } catch (error) {
-      if (error instanceof ApiError && error.status === 401) {
-        setUser(null);
-      } else {
+    const attempts = 3;
+    for (let index = 0; index < attempts; index += 1) {
+      try {
+        const response = await api.me();
+        setUser(response.user);
+        return;
+      } catch (error) {
+        if (error instanceof ApiError && error.status === 401) {
+          setUser(null);
+          return;
+        }
+
+        if (index < attempts - 1) {
+          await new Promise((resolve) => window.setTimeout(resolve, 220 * (index + 1)));
+          continue;
+        }
+
         console.error("Failed to fetch /api/me", error);
       }
     }

@@ -62,7 +62,18 @@ export function LoginPage() {
     }
   }, [navigate, user?.id]);
 
-  const verifySessionWithRetry = async () => {
+  const verifySessionWithRetry = async (sessionToken?: string) => {
+    if (sessionToken) {
+      try {
+        const meWithToken = await api.meWithSessionToken(sessionToken);
+        if (meWithToken?.user?.id) {
+          return meWithToken;
+        }
+      } catch {
+        // Fall through to standard retry path.
+      }
+    }
+
     const attempts = 4;
     for (let index = 0; index < attempts; index += 1) {
       try {
@@ -136,8 +147,8 @@ export function LoginPage() {
 
     setPasswordLoading(true);
     try {
-      await api.loginWithPassword(normalizedEmail, password);
-      const me = await verifySessionWithRetry();
+      const loginResult = await api.loginWithPassword(normalizedEmail, password);
+      const me = await verifySessionWithRetry(loginResult.sessionToken);
       if (!me?.user?.id) {
         throw new Error("Unable to establish a login session. Please try again.");
       }
