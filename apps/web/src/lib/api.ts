@@ -48,7 +48,7 @@ function resolveApiBaseUrl(value: string | undefined): string {
 }
 
 const API_BASE_URL = resolveApiBaseUrl(import.meta.env.VITE_API_BASE_URL);
-const SESSION_FALLBACK_STORAGE_KEY = "tradevera_session_fallback";
+const SESSION_FALLBACK_STORAGE_KEY = "tradevera_session_fallback_v2";
 const DEFAULT_REQUEST_TIMEOUT_MS = 6500;
 
 function resolveRequestTimeoutMs(): number {

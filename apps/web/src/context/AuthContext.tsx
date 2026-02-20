@@ -11,7 +11,7 @@ interface AuthContextValue {
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
-const USER_CACHE_STORAGE_KEY = "tradevera_user_cache_v1";
+const USER_CACHE_STORAGE_KEY = "tradevera_user_cache_v2";
 const RECENT_AUTH_STORAGE_KEY = "tradevera_recent_auth_at";
 const RECENT_AUTH_WINDOW_MS = 2 * 60 * 1000;
 const SESSION_INVALID_EVENT = "tradevera:session-invalid";
