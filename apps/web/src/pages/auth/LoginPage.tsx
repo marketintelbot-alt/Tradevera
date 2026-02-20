@@ -8,7 +8,8 @@ import { Tabs } from "@/components/ui/Tabs";
 import { useToast } from "@/components/common/ToastProvider";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
-import { api } from "@/lib/api";
+import type { UserMe } from "@tradevera/shared";
+import { api, decodeSessionTokenClaims } from "@/lib/api";
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -89,6 +90,31 @@ export function LoginPage() {
     return null;
   };
 
+  const buildProvisionalUser = (sessionToken: string | undefined, fallbackEmail: string): UserMe | null => {
+    if (!sessionToken) {
+      return null;
+    }
+    const claims = decodeSessionTokenClaims(sessionToken);
+    if (!claims) {
+      return null;
+    }
+
+    const sameCachedUser = user && user.email.toLowerCase() === claims.email.toLowerCase() ? user : null;
+    const plan = sameCachedUser?.plan ?? "free";
+    return {
+      id: claims.sub,
+      email: claims.email || fallbackEmail,
+      plan,
+      tradeCount: sameCachedUser?.tradeCount ?? 0,
+      tradeLimit: plan === "free" ? (sameCachedUser?.tradeLimit ?? 50) : null,
+      freeDaysTotal: plan === "free" ? (sameCachedUser?.freeDaysTotal ?? 50) : null,
+      freeDaysRemaining: plan === "free" ? (sameCachedUser?.freeDaysRemaining ?? null) : null,
+      freeExpiresAt: plan === "free" ? (sameCachedUser?.freeExpiresAt ?? null) : null,
+      freeExpired: plan === "free" ? (sameCachedUser?.freeExpired ?? false) : false,
+      canUseProFeatures: plan === "pro"
+    };
+  };
+
   const sendLink = async () => {
     const normalizedEmail = email.trim().toLowerCase();
     if (!normalizedEmail) {
@@ -151,6 +177,11 @@ export function LoginPage() {
       const me = await verifySessionWithRetry(loginResult.sessionToken);
       if (me?.user?.id) {
         setAuthUser(me.user);
+      } else {
+        const provisionalUser = buildProvisionalUser(loginResult.sessionToken, normalizedEmail);
+        if (provisionalUser) {
+          setAuthUser(provisionalUser);
+        }
       }
       // Keep profile data fresh in the background without blocking navigation.
       void refreshMe();

@@ -63,6 +63,34 @@ const REQUEST_TIMEOUT_MS = resolveRequestTimeoutMs();
 
 let cachedSessionFallbackToken: string | null | undefined;
 
+function decodeBase64UrlJson(value: string): unknown {
+  const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
+  const padded = normalized.padEnd(normalized.length + ((4 - (normalized.length % 4)) % 4), "=");
+  const json = atob(padded);
+  return JSON.parse(json);
+}
+
+export function decodeSessionTokenClaims(token: string): { sub: string; email: string; exp?: number; iat?: number } | null {
+  const parts = token.split(".");
+  if (parts.length !== 3) {
+    return null;
+  }
+  try {
+    const payload = decodeBase64UrlJson(parts[1]) as { sub?: unknown; email?: unknown; exp?: unknown; iat?: unknown };
+    if (typeof payload.sub !== "string" || typeof payload.email !== "string") {
+      return null;
+    }
+    return {
+      sub: payload.sub,
+      email: payload.email,
+      exp: typeof payload.exp === "number" ? payload.exp : undefined,
+      iat: typeof payload.iat === "number" ? payload.iat : undefined
+    };
+  } catch {
+    return null;
+  }
+}
+
 function getSessionFallbackToken(): string | null {
   if (cachedSessionFallbackToken !== undefined) {
     return cachedSessionFallbackToken;

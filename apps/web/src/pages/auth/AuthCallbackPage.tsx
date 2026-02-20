@@ -3,7 +3,8 @@ import { CheckCircle2, LockKeyhole, ShieldCheck } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { api } from "@/lib/api";
+import type { UserMe } from "@tradevera/shared";
+import { api, decodeSessionTokenClaims } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 
 export function AuthCallbackPage() {
@@ -43,6 +44,29 @@ export function AuthCallbackPage() {
     return null;
   };
 
+  const buildProvisionalUser = (sessionToken: string | undefined): UserMe | null => {
+    if (!sessionToken) {
+      return null;
+    }
+    const claims = decodeSessionTokenClaims(sessionToken);
+    if (!claims) {
+      return null;
+    }
+
+    return {
+      id: claims.sub,
+      email: claims.email,
+      plan: "free",
+      tradeCount: 0,
+      tradeLimit: 50,
+      freeDaysTotal: 50,
+      freeDaysRemaining: null,
+      freeExpiresAt: null,
+      freeExpired: false,
+      canUseProFeatures: false
+    };
+  };
+
   const continueSignIn = async () => {
     if (!hasToken || !token) {
       setError("Missing login token.");
@@ -57,6 +81,11 @@ export function AuthCallbackPage() {
       const me = await verifySessionWithRetry(consumeResult.sessionToken);
       if (me?.user?.id) {
         setAuthUser(me.user);
+      } else {
+        const provisionalUser = buildProvisionalUser(consumeResult.sessionToken);
+        if (provisionalUser) {
+          setAuthUser(provisionalUser);
+        }
       }
       // Keep profile data fresh in the background without blocking navigation.
       void refreshMe();
