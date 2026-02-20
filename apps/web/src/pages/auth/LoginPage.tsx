@@ -12,7 +12,7 @@ import { api } from "@/lib/api";
 
 export function LoginPage() {
   const navigate = useNavigate();
-  const { refreshMe } = useAuth();
+  const { user, refreshMe } = useAuth();
   const [authMode, setAuthMode] = useState<"magic" | "password">("magic");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -55,6 +55,12 @@ export function LoginPage() {
     const timer = window.setTimeout(() => setSentGlow(false), 1800);
     return () => window.clearTimeout(timer);
   }, [loading, sent, requestId]);
+
+  useEffect(() => {
+    if (user?.id) {
+      navigate("/app/dashboard", { replace: true });
+    }
+  }, [navigate, user?.id]);
 
   const sendLink = async () => {
     const normalizedEmail = email.trim().toLowerCase();

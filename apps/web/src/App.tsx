@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -16,9 +17,40 @@ import { LoginPage } from "@/pages/auth/LoginPage";
 import { LandingPage } from "@/pages/marketing/LandingPage";
 
 function ProtectedShell() {
-  const { user, loading } = useAuth();
+  const { user, loading, refreshMe } = useAuth();
+  const [verifyingSession, setVerifyingSession] = useState(false);
+  const [sessionChecked, setSessionChecked] = useState(false);
 
-  if (loading) {
+  useEffect(() => {
+    if (loading) {
+      return;
+    }
+
+    if (user) {
+      setSessionChecked(false);
+      return;
+    }
+
+    if (verifyingSession || sessionChecked) {
+      return;
+    }
+
+    let active = true;
+    setVerifyingSession(true);
+    void refreshMe().finally(() => {
+      if (!active) {
+        return;
+      }
+      setVerifyingSession(false);
+      setSessionChecked(true);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [loading, refreshMe, sessionChecked, user, verifyingSession]);
+
+  if (loading || verifyingSession || (!user && !sessionChecked)) {
     return (
       <div className="mx-auto mt-24 w-full max-w-xl space-y-4 px-4">
         <Skeleton className="h-14 w-full" />
