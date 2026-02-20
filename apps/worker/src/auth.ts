@@ -33,6 +33,31 @@ export const SESSION_COOKIE_NAME = "tv_session";
 const MAGIC_LINK_EXPIRY_MINUTES = 15;
 const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 30;
 
+function trimWrappingQuotes(value: string): string {
+  if (value.length < 2) {
+    return value;
+  }
+
+  const first = value[0];
+  const last = value[value.length - 1];
+  const matchingQuote = (first === `"` && last === `"`) || (first === "'" && last === "'") || (first === "`" && last === "`");
+  return matchingQuote ? value.slice(1, -1) : value;
+}
+
+function normalizeOrigin(value: string | undefined | null): string | null {
+  const trimmed = trimWrappingQuotes((value ?? "").trim());
+  if (!trimmed) {
+    return null;
+  }
+
+  const candidate = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+  try {
+    return new URL(candidate).origin;
+  } catch {
+    return null;
+  }
+}
+
 function maskEmailForLogs(email: string): string {
   const [localPart, domainPart] = email.split("@");
   if (!localPart || !domainPart) {
@@ -83,15 +108,37 @@ async function ensureLifetimePro(c: Context<AppEnv>, user: UserRow): Promise<Use
   };
 }
 
+function resolveConfiguredFrontendOrigins(c: Context<AppEnv>): string[] {
+  const configuredOrigins = (c.env.FRONTEND_ORIGIN ?? "")
+    .split(",")
+    .map((value) => normalizeOrigin(value))
+    .filter((value): value is string => Boolean(value));
+
+  const appOrigin = normalizeOrigin(c.env.APP_URL);
+  if (appOrigin && !configuredOrigins.includes(appOrigin)) {
+    configuredOrigins.push(appOrigin);
+  }
+
+  return configuredOrigins;
+}
+
 function shouldIncludeSessionFallbackToken(c: Context<AppEnv>): boolean {
-  try {
-    const appOrigin = new URL(c.env.APP_URL).origin;
-    const requestOrigin = new URL(c.req.url).origin;
-    if (appOrigin !== requestOrigin) {
+  // Optional override for environments where cookie behavior is inconsistent.
+  if (isTruthyEnv(c.env.FORCE_SESSION_FALLBACK_AUTH)) {
+    return true;
+  }
+
+  const requestUrlOrigin = normalizeOrigin(c.req.url);
+  const requestOrigin = normalizeOrigin(c.req.header("Origin"));
+  if (requestUrlOrigin && requestOrigin && requestOrigin !== requestUrlOrigin) {
+    return true;
+  }
+
+  if (requestUrlOrigin) {
+    const configuredFrontendOrigins = resolveConfiguredFrontendOrigins(c);
+    if (configuredFrontendOrigins.some((origin) => origin !== requestUrlOrigin)) {
       return true;
     }
-  } catch {
-    // Fallback to request header inference below.
   }
 
   return sessionSameSite(c.req.url, c.req.header("Origin")) === "None";
@@ -275,28 +322,56 @@ export async function authenticateRequest(c: Context<AppEnv>): Promise<AuthUser 
   const authorizationHeader = c.req.header("Authorization");
   const bearerToken =
     authorizationHeader && authorizationHeader.startsWith("Bearer ") ? authorizationHeader.slice("Bearer ".length).trim() : null;
-  const sessionToken = parseCookie(cookieHeader, SESSION_COOKIE_NAME) ?? bearerToken;
-  if (!sessionToken) {
+  const cookieToken = parseCookie(cookieHeader, SESSION_COOKIE_NAME);
+
+  const tokenCandidates: string[] = [];
+  if (cookieToken) {
+    tokenCandidates.push(cookieToken);
+  }
+  if (bearerToken && bearerToken !== cookieToken) {
+    tokenCandidates.push(bearerToken);
+  }
+
+  if (tokenCandidates.length === 0) {
     return null;
   }
 
-  const payload = await verifyJwt(sessionToken, c.env.JWT_SECRET);
-  if (!payload) {
-    return null;
+  for (const candidateToken of tokenCandidates) {
+    const payload = await verifyJwt(candidateToken, c.env.JWT_SECRET);
+    if (!payload) {
+      continue;
+    }
+
+    const user = await getUserById(c.env.DB, payload.sub);
+    if (!user || user.session_version !== payload.session_version) {
+      continue;
+    }
+
+    // If a stale cookie existed but a bearer fallback token is valid, refresh
+    // the cookie so subsequent requests stop bouncing between auth states.
+    if (cookieToken && bearerToken && candidateToken === bearerToken && bearerToken !== cookieToken) {
+      const secure = shouldUseSecureCookie(c.req.url);
+      const sameSite = sessionSameSite(c.req.url, c.req.header("Origin"));
+      c.header(
+        "Set-Cookie",
+        createSessionCookie(SESSION_COOKIE_NAME, bearerToken, {
+          secure,
+          sameSite,
+          maxAgeSeconds: SESSION_MAX_AGE_SECONDS
+        })
+      );
+    }
+
+    return {
+      id: user.id,
+      email: user.email,
+      plan: user.plan,
+      createdAt: user.created_at,
+      sessionVersion: user.session_version
+    };
   }
 
-  const user = await getUserById(c.env.DB, payload.sub);
-  if (!user || user.session_version !== payload.session_version) {
-    return null;
-  }
-
-  return {
-    id: user.id,
-    email: user.email,
-    plan: user.plan,
-    createdAt: user.created_at,
-    sessionVersion: user.session_version
-  };
+  return null;
 }
 
 export async function requireAuth(c: Context<AppEnv>): Promise<AuthUser | Response> {

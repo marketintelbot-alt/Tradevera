@@ -15,6 +15,7 @@ const USER_CACHE_STORAGE_KEY = "tradevera_user_cache_v2";
 const RECENT_AUTH_STORAGE_KEY = "tradevera_recent_auth_at";
 const RECENT_AUTH_WINDOW_MS = 2 * 60 * 1000;
 const SESSION_INVALID_EVENT = "tradevera:session-invalid";
+let recentAuthAtMemory: number | null = null;
 
 function isUserMe(value: unknown): value is UserMe {
   if (!value || typeof value !== "object") {
@@ -63,17 +64,19 @@ function writeCachedUser(nextUser: UserMe | null) {
 }
 
 function markRecentAuthNow() {
+  recentAuthAtMemory = Date.now();
   if (typeof window === "undefined") {
     return;
   }
   try {
-    window.sessionStorage.setItem(RECENT_AUTH_STORAGE_KEY, String(Date.now()));
+    window.sessionStorage.setItem(RECENT_AUTH_STORAGE_KEY, String(recentAuthAtMemory));
   } catch {
     // Ignore storage failures in restricted browsing modes.
   }
 }
 
 function clearRecentAuthMarker() {
+  recentAuthAtMemory = null;
   if (typeof window === "undefined") {
     return;
   }
@@ -85,6 +88,10 @@ function clearRecentAuthMarker() {
 }
 
 function hasRecentAuthMarker(): boolean {
+  if (recentAuthAtMemory && Date.now() - recentAuthAtMemory <= RECENT_AUTH_WINDOW_MS) {
+    return true;
+  }
+
   if (typeof window === "undefined") {
     return false;
   }
@@ -97,7 +104,11 @@ function hasRecentAuthMarker(): boolean {
     if (!Number.isFinite(timestamp)) {
       return false;
     }
-    return Date.now() - timestamp <= RECENT_AUTH_WINDOW_MS;
+    if (Date.now() - timestamp <= RECENT_AUTH_WINDOW_MS) {
+      recentAuthAtMemory = timestamp;
+      return true;
+    }
+    return false;
   } catch {
     return false;
   }
@@ -114,6 +125,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [user]);
 
   const setAuthUser = useCallback((nextUser: UserMe | null) => {
+    // Invalidate older in-flight refresh calls so stale 401 responses cannot
+    // overwrite a freshly established authenticated user.
+    refreshVersionRef.current += 1;
     userRef.current = nextUser;
     setUser(nextUser);
     writeCachedUser(nextUser);
@@ -143,11 +157,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         if (error instanceof ApiError && error.status === 401) {
-          if (userRef.current && hasRecentAuthMarker() && index < attempts - 1) {
-            // Allow one retry for transient auth propagation races after login.
-            clearRecentAuthMarker();
-            await new Promise((resolve) => window.setTimeout(resolve, 220));
-            continue;
+          if (userRef.current && hasRecentAuthMarker()) {
+            // Preserve freshly logged-in state during short auth propagation windows.
+            return;
           }
           setAuthUser(null);
           return;

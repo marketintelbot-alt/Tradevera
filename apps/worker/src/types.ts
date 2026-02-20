@@ -14,6 +14,7 @@ export interface Env {
   SUPPORT_EMAIL?: string;
   ALLOW_MAGIC_LINK_IN_RESPONSE?: string;
   LIFETIME_PRO_EMAILS?: string;
+  FORCE_SESSION_FALLBACK_AUTH?: string;
 }
 
 export interface AuthUser {

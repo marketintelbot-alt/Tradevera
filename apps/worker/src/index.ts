@@ -17,12 +17,13 @@ const FREE_READ_ONLY_ROUTES = new Set(["/api/trades", "/api/projects", "/api/tas
 const app = new Hono<AppEnv>();
 
 function toOrigin(value: string | undefined): string | null {
-  const trimmed = (value ?? "").trim();
+  const trimmed = (value ?? "").trim().replace(/^["'`](.*)["'`]$/, "$1").trim();
   if (!trimmed) {
     return null;
   }
+  const candidate = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
   try {
-    return new URL(trimmed).origin;
+    return new URL(candidate).origin;
   } catch {
     return null;
   }

@@ -85,11 +85,17 @@ export function AuthCallbackPage() {
       }
 
       const me = await verifySessionWithRetry(consumeResult.sessionToken);
+      const resolvedUser = me?.user ?? provisionalUser;
+      if (!resolvedUser?.id) {
+        throw new Error(
+          "Unable to establish a login session. Request a fresh link and allow site cookies in this browser."
+        );
+      }
       if (me?.user?.id) {
         setAuthUser(me.user);
       }
       // Keep profile data fresh in the background without blocking navigation.
-      void refreshMe();
+      await refreshMe().catch(() => undefined);
       if (consumeResult.temporaryPassword) {
         setTemporaryPassword(consumeResult.temporaryPassword);
         return;

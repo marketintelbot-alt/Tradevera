@@ -180,11 +180,17 @@ export function LoginPage() {
       }
 
       const me = await verifySessionWithRetry(loginResult.sessionToken);
+      const resolvedUser = me?.user ?? provisionalUser;
+      if (!resolvedUser?.id) {
+        throw new Error(
+          "Unable to establish a login session. Please use the magic-link flow or allow site cookies in this browser."
+        );
+      }
       if (me?.user?.id) {
         setAuthUser(me.user);
       }
       // Keep profile data fresh in the background without blocking navigation.
-      void refreshMe();
+      await refreshMe().catch(() => undefined);
       toast({
         title: "Signed in",
         description: "Welcome back.",
