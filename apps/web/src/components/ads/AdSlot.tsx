@@ -59,7 +59,8 @@ export function AdSlot({ compact = false, placement = "dashboard" }: AdSlotProps
 
   const slotId = useMemo(() => getAdSlotId(placement), [placement]);
   const isFreePlan = user?.plan === "free";
-  const canRenderGoogleAd = isFreePlan && ADSENSE_ENABLED && Boolean(slotId);
+  const canLoadAdSense = isFreePlan && ADSENSE_ENABLED;
+  const canRenderGoogleAd = canLoadAdSense && Boolean(slotId);
 
   useEffect(() => {
     if (isFreePlan) {
@@ -69,7 +70,7 @@ export function AdSlot({ compact = false, placement = "dashboard" }: AdSlotProps
   }, [isFreePlan]);
 
   useEffect(() => {
-    if (!canRenderGoogleAd) {
+    if (!canLoadAdSense) {
       return;
     }
 
@@ -82,7 +83,7 @@ export function AdSlot({ compact = false, placement = "dashboard" }: AdSlotProps
         unloadAdSenseArtifacts();
       }
     };
-  }, [canRenderGoogleAd]);
+  }, [canLoadAdSense]);
 
   useEffect(() => {
     if (!canRenderGoogleAd || !adRef.current) {
@@ -124,6 +125,13 @@ export function AdSlot({ compact = false, placement = "dashboard" }: AdSlotProps
               data-full-width-responsive="true"
             />
             <p className="mt-2 text-xs text-ink-700">Ads appear only on the Free plan. Starter and Pro are fully ad-free.</p>
+          </>
+        ) : canLoadAdSense ? (
+          <>
+            <p className="text-sm font-semibold text-ink-900">Free plan sponsorship area</p>
+            <p className="mt-1 text-xs text-ink-700">
+              AdSense script is active for Free users. Configure slot IDs to pin this placement, or manage auto-ads in AdSense.
+            </p>
           </>
         ) : (
           <>
