@@ -186,12 +186,8 @@ export function registerAuthRoutes(app: import("hono").Hono<AppEnv>) {
   });
 
   app.get("/auth/consume", async (c) => {
-    const token = c.req.query("token");
-    if (!token) {
-      return c.json({ error: "Missing token" }, 400);
-    }
-
-    return consumeMagicLinkToken(c, token);
+    c.header("Allow", "POST");
+    return c.json({ error: "Method not allowed. Use POST /auth/consume." }, 405);
   });
 
   app.post("/api/logout", async (c) => {

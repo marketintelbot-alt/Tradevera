@@ -18,9 +18,8 @@ Tradevera is a production-ready trading journal SaaS MVP with:
 
 If your goal is "ready for sales tonight", do these in order:
 
-1. Render: sync latest commit and redeploy
+1. Render: sync latest `main` commit and redeploy
 - Repo: `marketintelbot-alt/Tradevera`
-- Latest commit: `5c6d235`
 - Env var on Render static site:
   - `VITE_API_BASE_URL=https://tradevera-worker.tradevera.workers.dev`
 
@@ -90,7 +89,8 @@ tradevera/
 
 ### Auth
 - `POST /auth/request-link` creates hashed one-time token (15 min expiry), stores in D1, emails magic link
-- `GET /auth/consume?token=...` validates token, creates user if new, issues JWT in HttpOnly cookie (`tv_session`)
+- `POST /auth/consume` validates token, creates user if new, issues JWT in HttpOnly cookie (`tv_session`)
+- `/auth/callback?token=...` in the web app requires an explicit user click to finish sign-in (prevents link scanners from burning tokens)
 - JWT includes `sub`, `email`, `iat`, `exp`, `session_version`
 - Logout increments `session_version` and clears cookie
 
@@ -362,7 +362,8 @@ VITE_ADSENSE_SLOT_TRADES=<slot-id>
 ## Route List
 
 - `POST /auth/request-link`
-- `GET /auth/consume?token=...`
+- `POST /auth/consume`
+- `GET /auth/consume` (returns `405` guidance; consume is POST-only)
 - `POST /api/logout`
 - `GET /api/me`
 - `GET /api/trades`

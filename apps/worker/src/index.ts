@@ -31,8 +31,8 @@ function toOrigin(value: string | undefined): string | null {
 function resolveAllowedOrigins(frontendOriginVar: string, appUrlVar: string): string[] {
   const fromFrontend = frontendOriginVar
     .split(",")
-    .map((origin) => origin.trim())
-    .filter(Boolean);
+    .map((origin) => toOrigin(origin))
+    .filter((origin): origin is string => Boolean(origin));
   const appOrigin = toOrigin(appUrlVar);
   if (appOrigin && !fromFrontend.includes(appOrigin)) {
     fromFrontend.push(appOrigin);

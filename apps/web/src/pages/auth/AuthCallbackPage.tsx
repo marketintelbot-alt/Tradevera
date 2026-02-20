@@ -13,9 +13,10 @@ export function AuthCallbackPage() {
   const navigate = useNavigate();
   const { refreshMe } = useAuth();
   const token = useMemo(() => searchParams.get("token"), [searchParams]);
+  const hasToken = Boolean(token && token.trim().length > 0);
 
   const continueSignIn = async () => {
-    if (!token) {
+    if (!hasToken || !token) {
       setError("Missing login token.");
       return;
     }
@@ -56,13 +57,23 @@ export function AuthCallbackPage() {
           </>
         ) : (
           <div className="mt-4 space-y-3">
-            <div className="rounded-lg border border-mint-500/30 bg-mint-100/55 px-3 py-2 text-xs text-ink-800">
+            <div
+              className={`rounded-lg border px-3 py-2 text-xs ${
+                hasToken ? "border-mint-500/30 bg-mint-100/55 text-ink-800" : "border-coral-500/30 bg-coral-100/55 text-ink-900"
+              }`}
+            >
               <p className="inline-flex items-center gap-1">
-                <CheckCircle2 className="h-3.5 w-3.5 text-mint-500" />
-                Token detected and ready.
+                <CheckCircle2 className={`h-3.5 w-3.5 ${hasToken ? "text-mint-500" : "text-coral-500"}`} />
+                {hasToken ? "Token detected and ready." : "No token found in this link. Request a new email."}
               </p>
             </div>
-            <Button type="button" className="w-full gap-2" onClick={() => void continueSignIn()} loading={status === "loading"}>
+            <Button
+              type="button"
+              className="w-full gap-2"
+              onClick={() => void continueSignIn()}
+              loading={status === "loading"}
+              disabled={!hasToken}
+            >
               <LockKeyhole className="h-4 w-4" />
               Continue secure sign-in
             </Button>
