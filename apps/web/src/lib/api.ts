@@ -63,6 +63,7 @@ const REQUEST_TIMEOUT_MS = resolveRequestTimeoutMs();
 
 let cachedSessionFallbackToken: string | null | undefined;
 const SESSION_INVALID_EVENT = "tradevera:session-invalid";
+let sessionTokenVersion = 0;
 
 function decodeBase64UrlJson(value: string): unknown {
   const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
@@ -122,7 +123,11 @@ function getSessionFallbackToken(): string | null {
 }
 
 function setSessionFallbackToken(token: string | null) {
-  cachedSessionFallbackToken = token && token.trim().length > 0 ? token.trim() : null;
+  const normalized = token && token.trim().length > 0 ? token.trim() : null;
+  if (cachedSessionFallbackToken !== normalized) {
+    sessionTokenVersion += 1;
+  }
+  cachedSessionFallbackToken = normalized;
   if (typeof window === "undefined") {
     return;
   }
@@ -175,6 +180,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
   const hadAuthorizationHeader = headers.has("Authorization");
   const fallbackTokenAtRequestStart = getSessionFallbackToken();
+  const tokenVersionAtRequestStart = sessionTokenVersion;
   if (fallbackTokenAtRequestStart && !hadAuthorizationHeader) {
     headers.set("Authorization", `Bearer ${fallbackTokenAtRequestStart}`);
   }
@@ -243,7 +249,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     if (!response.ok) {
       if (response.status === 401) {
         clearFallbackTokenIfStale();
-        if (!hadAuthorizationHeader) {
+        if (!hadAuthorizationHeader && tokenVersionAtRequestStart === sessionTokenVersion) {
           notifySessionInvalid();
         }
       }

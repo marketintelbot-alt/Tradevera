@@ -171,6 +171,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const onSessionInvalid = () => {
+      if (hasRecentAuthMarker()) {
+        return;
+      }
       if (userRef.current) {
         setAuthUser(null);
       }
