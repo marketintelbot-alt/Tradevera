@@ -16,6 +16,22 @@ export function AuthCallbackPage() {
   const token = useMemo(() => searchParams.get("token"), [searchParams]);
   const hasToken = Boolean(token && token.trim().length > 0);
 
+  const verifySessionWithRetry = async () => {
+    const attempts = 4;
+    for (let index = 0; index < attempts; index += 1) {
+      try {
+        const me = await api.me();
+        if (me?.user?.id) {
+          return me;
+        }
+      } catch {
+        // Retry for transient cookie propagation timing.
+      }
+      await new Promise((resolve) => window.setTimeout(resolve, 200 * (index + 1)));
+    }
+    return null;
+  };
+
   const continueSignIn = async () => {
     if (!hasToken || !token) {
       setError("Missing login token.");
@@ -27,9 +43,9 @@ export function AuthCallbackPage() {
     setTemporaryPassword(null);
     try {
       const consumeResult = await api.consumeMagicLink(token);
-      const me = await api.me();
-      if (!me?.user?.id) {
-        throw new Error("Session was not established. Request a new login link.");
+      const me = await verifySessionWithRetry();
+      if (!me) {
+        throw new Error("Session cookie was blocked by your browser. Disable third-party cookie blocking for this site and try again.");
       }
       await refreshMe();
       if (consumeResult.temporaryPassword) {

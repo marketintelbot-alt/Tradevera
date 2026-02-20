@@ -104,6 +104,11 @@ export function createSessionCookie(name: string, token: string, options: Sessio
     parts.push("Secure");
   }
 
+  // Helps cross-site session persistence in browsers that block non-partitioned third-party cookies.
+  if (sameSite === "None" && options.secure) {
+    parts.push("Partitioned");
+  }
+
   return parts.join("; ");
 }
 
@@ -111,6 +116,9 @@ export function clearSessionCookie(name: string, secure: boolean, sameSite: "Lax
   const parts = [`${name}=`, "Path=/", "HttpOnly", `SameSite=${sameSite}`, "Max-Age=0"];
   if (secure) {
     parts.push("Secure");
+  }
+  if (sameSite === "None" && secure) {
+    parts.push("Partitioned");
   }
   return parts.join("; ");
 }
