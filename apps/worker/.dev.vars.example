@@ -9,6 +9,7 @@ STRIPE_PRICE_ID_PRO=price_replace
 RESEND_API_KEY=re_replace
 RESEND_FROM=Tradevera <no-reply@example.com>
 SUPPORT_EMAIL=marketintel@gmail.com
+LIFETIME_PRO_EMAILS=johnnymaris@icloud.com,marketintel@gmail.com
 
 # Local-only debug fallback (never enable in production)
 ALLOW_MAGIC_LINK_IN_RESPONSE=true

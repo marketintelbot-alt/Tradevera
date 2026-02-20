@@ -12,6 +12,7 @@ export interface Env {
   APP_URL: string;
   SUPPORT_EMAIL?: string;
   ALLOW_MAGIC_LINK_IN_RESPONSE?: string;
+  LIFETIME_PRO_EMAILS?: string;
 }
 
 export interface AuthUser {

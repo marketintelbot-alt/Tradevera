@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/Button";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { useToast } from "@/components/common/ToastProvider";
 import { useAuth } from "@/context/AuthContext";
-import { api } from "@/lib/api";
+import { ApiError, api } from "@/lib/api";
 
 export function SettingsPage() {
   const { user, refreshMe } = useAuth();
@@ -52,9 +52,18 @@ export function SettingsPage() {
       const { checkoutUrl } = await api.createCheckoutSession();
       window.location.href = checkoutUrl;
     } catch (error) {
+      const details =
+        error instanceof ApiError &&
+        typeof error.details === "object" &&
+        error.details &&
+        "details" in error.details &&
+        typeof (error.details as { details?: unknown }).details === "string"
+          ? (error.details as { details: string }).details
+          : null;
+
       toast({
         title: "Checkout launch failed",
-        description: error instanceof Error ? error.message : "Unexpected error",
+        description: details ?? (error instanceof Error ? error.message : "Unexpected error"),
         tone: "error"
       });
     } finally {

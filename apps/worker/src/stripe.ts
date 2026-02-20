@@ -4,6 +4,7 @@ import type { AppEnv } from "./types";
 import { requireAuth } from "./auth";
 import { getUserByEmail, getUserById, findUserIdBySubscriptionCustomer, getLatestSubscriptionByUser } from "./utils/db";
 import { sendProWelcomeEmail } from "./utils/email";
+import { isLifetimeProEmail } from "./utils/lifetime";
 import { createStripeCheckoutSession, createStripePortalSession, verifyStripeWebhookSignature } from "./utils/stripe";
 import { nowIso } from "./utils/security";
 
@@ -19,6 +20,20 @@ interface StripeEvent {
 
 function resolveProPriceId(env: AppEnv["Bindings"]): string | null {
   return env.STRIPE_PRICE_ID_PRO ?? env.STRIPE_PRICE_PRO ?? null;
+}
+
+function resolveCheckoutPriceCandidates(
+  env: AppEnv["Bindings"],
+  requestedPriceId: string | undefined
+): string[] {
+  const candidates = [
+    requestedPriceId,
+    env.STRIPE_PRICE_ID_PRO,
+    env.STRIPE_PRICE_PRO,
+    env.STRIPE_PRICE_STARTER
+  ].filter((value): value is string => Boolean(value && value.trim().length > 0));
+
+  return [...new Set(candidates)];
 }
 
 async function findUserIdForEvent(
@@ -52,14 +67,16 @@ async function setUserPlan(c: import("hono").Context<AppEnv>, userId: string, ta
     return;
   }
 
+  const resolvedTarget = isLifetimeProEmail(c.env, user.email) ? "pro" : targetPlan;
+
   const now = nowIso();
-  const shouldSendWelcome = targetPlan === "pro" && user.plan !== "pro" && !user.pro_welcome_sent_at;
+  const shouldSendWelcome = resolvedTarget === "pro" && user.plan !== "pro" && !user.pro_welcome_sent_at;
 
   await c.env.DB
     .prepare(
       "UPDATE users SET plan = ?, pro_welcome_sent_at = CASE WHEN ? = 1 THEN COALESCE(pro_welcome_sent_at, ?) ELSE pro_welcome_sent_at END WHERE id = ?"
     )
-    .bind(targetPlan, shouldSendWelcome ? 1 : 0, now, userId)
+    .bind(resolvedTarget, shouldSendWelcome ? 1 : 0, now, userId)
     .run();
 
   if (shouldSendWelcome) {
@@ -207,28 +224,39 @@ export function registerStripeRoutes(app: Hono<AppEnv>) {
       return c.json({ error: "Invalid checkout request" }, 400);
     }
 
-    const defaultProPriceId = resolveProPriceId(c.env);
-    const priceId = parsed.data.priceId ?? defaultProPriceId;
-    if (!priceId) {
+    const checkoutCandidates = resolveCheckoutPriceCandidates(c.env, parsed.data.priceId);
+    if (checkoutCandidates.length === 0) {
       return c.json({ error: "Missing Stripe Pro price id configuration" }, 500);
     }
     const appUrl = c.env.APP_URL.endsWith("/") ? c.env.APP_URL.slice(0, -1) : c.env.APP_URL;
 
-    try {
-      const session = await createStripeCheckoutSession({
-        stripeSecretKey: c.env.STRIPE_SECRET_KEY,
-        priceId,
-        successUrl: `${appUrl}/app/settings?success=1`,
-        cancelUrl: `${appUrl}/app/settings?canceled=1`,
-        userId: auth.id,
-        email: auth.email
-      });
+    let lastError: string | null = null;
+    for (const priceId of checkoutCandidates) {
+      try {
+        const session = await createStripeCheckoutSession({
+          stripeSecretKey: c.env.STRIPE_SECRET_KEY,
+          priceId,
+          successUrl: `${appUrl}/app/settings?success=1`,
+          cancelUrl: `${appUrl}/app/settings?canceled=1`,
+          userId: auth.id,
+          email: auth.email
+        });
 
-      return c.json({ checkoutUrl: session.url, id: session.id });
-    } catch (error) {
-      console.error("Failed to create Stripe checkout session", error);
-      return c.json({ error: "Unable to start checkout session" }, 502);
+        return c.json({ checkoutUrl: session.url, id: session.id });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Unexpected Stripe error";
+        lastError = message;
+        console.error("Failed to create Stripe checkout session", { priceId, message });
+      }
     }
+
+    return c.json(
+      {
+        error: "Unable to start checkout session",
+        details: lastError ?? "Stripe checkout failed for configured price IDs."
+      },
+      502
+    );
   });
 
   app.post("/api/stripe/create-portal-session", async (c) => {

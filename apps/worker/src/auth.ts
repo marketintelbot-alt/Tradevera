@@ -4,6 +4,7 @@ import type { AppEnv, AuthUser } from "./types";
 import { createUser, getUserByEmail, getUserById, incrementUserSessionVersion } from "./utils/db";
 import { sendMagicLinkEmail } from "./utils/email";
 import { clearSessionCookie, createSessionCookie, parseCookie, signJwt, verifyJwt } from "./utils/jwt";
+import { isLifetimeProEmail } from "./utils/lifetime";
 import { addMinutesIso, isTruthyEnv, nowIso, randomToken, sha256Hex } from "./utils/security";
 
 interface LoginTokenRow {
@@ -78,6 +79,14 @@ async function consumeMagicLinkToken(c: Context<AppEnv>, token: string) {
   let user = await getUserByEmail(c.env.DB, tokenRow.user_email);
   if (!user) {
     user = await createUser(c.env.DB, tokenRow.user_email);
+  }
+
+  if (isLifetimeProEmail(c.env, user.email) && user.plan !== "pro") {
+    await c.env.DB.prepare("UPDATE users SET plan = 'pro' WHERE id = ?").bind(user.id).run();
+    user = {
+      ...user,
+      plan: "pro"
+    };
   }
 
   const nowSeconds = Math.floor(Date.now() / 1000);

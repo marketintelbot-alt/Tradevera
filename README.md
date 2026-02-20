@@ -33,9 +33,12 @@ If your goal is "ready for sales tonight", do these in order:
   - `STRIPE_SECRET_KEY` (live)
   - `STRIPE_WEBHOOK_SECRET`
   - `STRIPE_PRICE_ID_PRO`
+  - `STRIPE_PRICE_PRO` (legacy alias supported)
+  - `STRIPE_PRICE_STARTER` (optional fallback if Pro price is unavailable)
   - `RESEND_API_KEY`
   - `RESEND_FROM`
   - `SUPPORT_EMAIL`
+  - `LIFETIME_PRO_EMAILS` (comma-separated creator/admin emails that must always remain Pro)
 - Keep `ALLOW_MAGIC_LINK_IN_RESPONSE` unset or `false` in production.
 - Optional one-command deploy from terminal:
   - `bash scripts/deploy-worker-prod.sh` (after exporting required env vars listed in the script)
@@ -105,6 +108,7 @@ tradevera/
   - `customer.subscription.deleted`
 - Updates `subscriptions` table and user plan (`free`/`pro`)
 - Sends “Welcome to Tradevera Pro” on first activation
+- Optional `LIFETIME_PRO_EMAILS` prevents creator/admin emails from being downgraded
 
 ### Trade Journal
 - Full CRUD on `trades`
@@ -193,11 +197,17 @@ JWT_SECRET=<random long secret>
 STRIPE_SECRET_KEY=<stripe sk_...>
 STRIPE_WEBHOOK_SECRET=<whsec_...>
 STRIPE_PRICE_ID_PRO=<price_...>
+STRIPE_PRICE_PRO=<optional legacy alias>
+STRIPE_PRICE_STARTER=<optional fallback paid price>
 RESEND_API_KEY=<re_...>
 RESEND_FROM=Tradevera <no-reply@yourdomain.com>
 APP_URL=https://<your-render-domain>
 SUPPORT_EMAIL=support@yourdomain.com
+LIFETIME_PRO_EMAILS=owner@yourdomain.com,cofounder@yourdomain.com
 ```
+
+`STRIPE_PRICE_ID_PRO` / `STRIPE_PRICE_PRO` / `STRIPE_PRICE_STARTER` can be either `price_...` or `prod_...`.
+If a product ID is provided, the Worker auto-resolves its default/active price for Checkout.
 
 Use:
 - `apps/web/.env.example`

@@ -25,18 +25,82 @@ interface CreatePortalOptions {
   returnUrl: string;
 }
 
+async function stripeRequestJson<T>(
+  stripeSecretKey: string,
+  path: string,
+  init?: RequestInit
+): Promise<T> {
+  const response = await fetch(`https://api.stripe.com${path}`, {
+    ...init,
+    headers: {
+      Authorization: `Bearer ${stripeSecretKey}`,
+      ...(init?.headers ?? {})
+    }
+  });
+
+  const payload = (await response.json()) as T & { error?: { message?: string } };
+  if (!response.ok) {
+    throw new Error(payload.error?.message ?? `Stripe request failed (${response.status})`);
+  }
+
+  return payload;
+}
+
+async function resolveCheckoutPriceId(stripeSecretKey: string, configuredId: string): Promise<string> {
+  if (configuredId.startsWith("price_")) {
+    return configuredId;
+  }
+
+  if (!configuredId.startsWith("prod_")) {
+    throw new Error(`Invalid Stripe price configuration: '${configuredId}'`);
+  }
+
+  const product = await stripeRequestJson<{ default_price?: string | { id?: string } | null }>(
+    stripeSecretKey,
+    `/v1/products/${encodeURIComponent(configuredId)}`
+  );
+
+  const defaultPrice =
+    typeof product.default_price === "string"
+      ? product.default_price
+      : typeof product.default_price === "object" && product.default_price
+        ? product.default_price.id
+        : null;
+
+  if (defaultPrice && defaultPrice.startsWith("price_")) {
+    return defaultPrice;
+  }
+
+  const prices = await stripeRequestJson<{
+    data?: Array<{ id?: string; active?: boolean; type?: string; recurring?: { interval?: string } | null }>;
+  }>(stripeSecretKey, `/v1/prices?product=${encodeURIComponent(configuredId)}&active=true&limit=20`);
+
+  const recurringCandidate = (prices.data ?? []).find((price) => price.id?.startsWith("price_") && price.recurring);
+  if (recurringCandidate?.id) {
+    return recurringCandidate.id;
+  }
+
+  const anyCandidate = (prices.data ?? []).find((price) => price.id?.startsWith("price_"));
+  if (anyCandidate?.id) {
+    return anyCandidate.id;
+  }
+
+  throw new Error(`No active price found for product '${configuredId}'`);
+}
+
 export async function createStripeCheckoutSession(options: CreateCheckoutOptions): Promise<StripeCheckoutSessionResult> {
+  const resolvedPriceId = await resolveCheckoutPriceId(options.stripeSecretKey, options.priceId);
   const form = new URLSearchParams();
   form.set("mode", "subscription");
   form.set("success_url", options.successUrl);
   form.set("cancel_url", options.cancelUrl);
   form.set("customer_email", options.email);
-  form.set("line_items[0][price]", options.priceId);
+  form.set("line_items[0][price]", resolvedPriceId);
   form.set("line_items[0][quantity]", "1");
   form.set("allow_promotion_codes", "true");
   form.set("metadata[user_id]", options.userId);
   form.set("metadata[email]", options.email);
-  form.set("metadata[price_id]", options.priceId);
+  form.set("metadata[price_id]", resolvedPriceId);
   form.set("subscription_data[metadata][user_id]", options.userId);
   form.set("subscription_data[metadata][email]", options.email);
 
