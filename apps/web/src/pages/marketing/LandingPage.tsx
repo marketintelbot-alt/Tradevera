@@ -115,7 +115,10 @@ export function LandingPage() {
 
         <section className="mt-14">
           <h2 className="text-2xl font-semibold text-ink-900">Pricing</h2>
-          <p className="mt-2 text-sm text-ink-700">Start free, grow into Starter, and unlock full Pro tooling when ready.</p>
+          <p className="mt-2 text-sm text-ink-700">
+            Start free, grow into Starter, and unlock full Pro tooling when ready.
+          </p>
+          <p className="mt-1 text-sm font-medium text-ink-900">Starter and Pro are 100% ad-free.</p>
           <div className="mt-5 grid gap-4 lg:grid-cols-3">
             <Card>
               <h3 className="text-xl font-semibold text-ink-900">Free</h3>

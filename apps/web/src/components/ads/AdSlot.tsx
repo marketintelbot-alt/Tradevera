@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useRef } from "react";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
+import { useAuth } from "@/context/AuthContext";
 import { ADSENSE_CLIENT_ID, ADSENSE_ENABLED, getAdSlotId, type AdPlacement } from "@/lib/ads";
 
 declare global {
   interface Window {
     adsbygoogle?: unknown[];
     __tradeveraAdsenseLoaded?: boolean;
+    __tradeveraAdSlotInstances?: number;
   }
 }
 
@@ -30,6 +32,22 @@ function loadAdSenseScript(clientId: string) {
   window.__tradeveraAdsenseLoaded = true;
 }
 
+function unloadAdSenseArtifacts() {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  const scripts = document.querySelectorAll<HTMLScriptElement>("script[data-tradevera-adsense='true']");
+  scripts.forEach((script) => script.remove());
+
+  // Defensive cleanup for auto-placed nodes if auto-ads was enabled in AdSense UI.
+  const autoPlaced = document.querySelectorAll<HTMLElement>(".google-auto-placed, [id^='aswift_']");
+  autoPlaced.forEach((node) => node.remove());
+
+  window.__tradeveraAdsenseLoaded = false;
+  window.adsbygoogle = [];
+}
+
 interface AdSlotProps {
   compact?: boolean;
   placement?: AdPlacement;
@@ -37,15 +55,33 @@ interface AdSlotProps {
 
 export function AdSlot({ compact = false, placement = "dashboard" }: AdSlotProps) {
   const adRef = useRef<HTMLModElement>(null);
+  const { user } = useAuth();
 
   const slotId = useMemo(() => getAdSlotId(placement), [placement]);
-  const canRenderGoogleAd = ADSENSE_ENABLED && Boolean(slotId);
+  const isFreePlan = user?.plan === "free";
+  const canRenderGoogleAd = isFreePlan && ADSENSE_ENABLED && Boolean(slotId);
+
+  useEffect(() => {
+    if (isFreePlan) {
+      return;
+    }
+    unloadAdSenseArtifacts();
+  }, [isFreePlan]);
 
   useEffect(() => {
     if (!canRenderGoogleAd) {
       return;
     }
+
+    window.__tradeveraAdSlotInstances = (window.__tradeveraAdSlotInstances ?? 0) + 1;
     loadAdSenseScript(ADSENSE_CLIENT_ID);
+
+    return () => {
+      window.__tradeveraAdSlotInstances = Math.max(0, (window.__tradeveraAdSlotInstances ?? 1) - 1);
+      if ((window.__tradeveraAdSlotInstances ?? 0) === 0) {
+        unloadAdSenseArtifacts();
+      }
+    };
   }, [canRenderGoogleAd]);
 
   useEffect(() => {
@@ -65,6 +101,10 @@ export function AdSlot({ compact = false, placement = "dashboard" }: AdSlotProps
     }
   }, [canRenderGoogleAd, slotId]);
 
+  if (!isFreePlan) {
+    return null;
+  }
+
   return (
     <Card className="border-dashed border-ink-200 bg-ink-100/35">
       <div className="flex items-center justify-between">
@@ -83,7 +123,7 @@ export function AdSlot({ compact = false, placement = "dashboard" }: AdSlotProps
               data-ad-format="auto"
               data-full-width-responsive="true"
             />
-            <p className="mt-2 text-xs text-ink-700">Ads are shown only on Free dashboard/list views.</p>
+            <p className="mt-2 text-xs text-ink-700">Ads appear only on the Free plan. Starter and Pro are fully ad-free.</p>
           </>
         ) : (
           <>

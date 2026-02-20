@@ -139,6 +139,7 @@ export function SettingsPage() {
             <p className="text-sm text-ink-700">
               Starter removes ads and free limits. Pro adds AI Assistant, weekly review exports, and advanced analytics.
             </p>
+            <p className="text-xs font-medium text-ink-900">Ads are Free-plan only. Starter and Pro never show ads.</p>
             <div className="flex flex-wrap gap-2">
               <Button
                 variant="secondary"

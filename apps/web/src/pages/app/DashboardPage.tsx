@@ -87,6 +87,7 @@ export function DashboardPage() {
                   ? `${user.freeDaysRemaining} day${user.freeDaysRemaining === 1 ? "" : "s"} left on Free.`
                   : "Upgrade to unlock unlimited cloud-synced trades."}
               </p>
+              <p className="mt-1 text-xs font-medium text-ink-900">Starter and Pro remove ads completely.</p>
             </Card>
           </div>
         ) : (
