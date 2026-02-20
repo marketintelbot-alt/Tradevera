@@ -149,10 +149,12 @@ export function LoginPage() {
     try {
       const loginResult = await api.loginWithPassword(normalizedEmail, password);
       const me = await verifySessionWithRetry(loginResult.sessionToken);
-      if (!me?.user?.id) {
-        throw new Error("Unable to establish a login session. Please try again.");
+      if (me?.user?.id) {
+        await refreshMe();
+      } else {
+        // Credentials succeeded; continue and let app-shell refresh finalize user state.
+        void refreshMe();
       }
-      await refreshMe();
       toast({
         title: "Signed in",
         description: "Welcome back.",

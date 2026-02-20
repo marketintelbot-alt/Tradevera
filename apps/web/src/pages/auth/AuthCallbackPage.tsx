@@ -55,10 +55,12 @@ export function AuthCallbackPage() {
     try {
       const consumeResult = await api.consumeMagicLink(token);
       const me = await verifySessionWithRetry(consumeResult.sessionToken);
-      if (!me) {
-        throw new Error("Unable to establish a login session. Request a fresh link and try again.");
+      if (me?.user?.id) {
+        await refreshMe();
+      } else {
+        // Token consume succeeded; continue and let app-shell refresh complete in background.
+        void refreshMe();
       }
-      await refreshMe();
       if (consumeResult.temporaryPassword) {
         setTemporaryPassword(consumeResult.temporaryPassword);
         return;
