@@ -30,26 +30,19 @@ function ProtectedShell() {
 
     if (user) {
       setSessionChecked(false);
+      setVerifyingSession(false);
       return;
     }
 
-    if (verifyingSession || sessionChecked) {
+    if (sessionChecked || verifyingSession) {
       return;
     }
 
-    let active = true;
     setVerifyingSession(true);
     void refreshMe().finally(() => {
-      if (!active) {
-        return;
-      }
       setVerifyingSession(false);
       setSessionChecked(true);
     });
-
-    return () => {
-      active = false;
-    };
   }, [loading, refreshMe, sessionChecked, user, verifyingSession]);
 
   useEffect(() => {
