@@ -46,7 +46,7 @@ function base64ToBytes(base64: string): Uint8Array {
 }
 
 const PASSWORD_HASH_VERSION = "pbkdf2_sha256";
-const PASSWORD_ITERATIONS = 180_000;
+const PASSWORD_ITERATIONS = 100_000;
 const PASSWORD_DERIVED_BITS = 256;
 const PASSWORD_SALT_BYTES = 16;
 
