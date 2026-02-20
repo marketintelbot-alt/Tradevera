@@ -84,6 +84,16 @@ async function ensureLifetimePro(c: Context<AppEnv>, user: UserRow): Promise<Use
 }
 
 function shouldIncludeSessionFallbackToken(c: Context<AppEnv>): boolean {
+  try {
+    const appOrigin = new URL(c.env.APP_URL).origin;
+    const requestOrigin = new URL(c.req.url).origin;
+    if (appOrigin !== requestOrigin) {
+      return true;
+    }
+  } catch {
+    // Fallback to request header inference below.
+  }
+
   return sessionSameSite(c.req.url, c.req.header("Origin")) === "None";
 }
 

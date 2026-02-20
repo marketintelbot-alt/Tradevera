@@ -62,6 +62,22 @@ export function LoginPage() {
     }
   }, [navigate, user?.id]);
 
+  const verifySessionWithRetry = async () => {
+    const attempts = 4;
+    for (let index = 0; index < attempts; index += 1) {
+      try {
+        const me = await api.me();
+        if (me?.user?.id) {
+          return me;
+        }
+      } catch {
+        // Retry transient CORS/cookie propagation failures.
+      }
+      await new Promise((resolve) => window.setTimeout(resolve, 200 * (index + 1)));
+    }
+    return null;
+  };
+
   const sendLink = async () => {
     const normalizedEmail = email.trim().toLowerCase();
     if (!normalizedEmail) {
@@ -121,7 +137,7 @@ export function LoginPage() {
     setPasswordLoading(true);
     try {
       await api.loginWithPassword(normalizedEmail, password);
-      const me = await api.me().catch(() => null);
+      const me = await verifySessionWithRetry();
       if (!me?.user?.id) {
         throw new Error("Unable to establish a login session. Please try again.");
       }
