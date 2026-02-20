@@ -14,6 +14,7 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 const USER_CACHE_STORAGE_KEY = "tradevera_user_cache_v1";
 const RECENT_AUTH_STORAGE_KEY = "tradevera_recent_auth_at";
 const RECENT_AUTH_WINDOW_MS = 2 * 60 * 1000;
+const SESSION_INVALID_EVENT = "tradevera:session-invalid";
 
 function isUserMe(value: unknown): value is UserMe {
   if (!value || typeof value !== "object") {
@@ -142,9 +143,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         if (error instanceof ApiError && error.status === 401) {
-          if (userRef.current && hasRecentAuthMarker()) {
-            // Avoid immediate bounce-to-login from transient auth propagation races.
-            return;
+          if (userRef.current && hasRecentAuthMarker() && index < attempts - 1) {
+            // Allow one retry for transient auth propagation races after login.
+            clearRecentAuthMarker();
+            await new Promise((resolve) => window.setTimeout(resolve, 220));
+            continue;
           }
           setAuthUser(null);
           return;
@@ -164,6 +167,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     refreshVersionRef.current += 1;
     await api.logout();
     setAuthUser(null);
+  }, [setAuthUser]);
+
+  useEffect(() => {
+    const onSessionInvalid = () => {
+      if (userRef.current) {
+        setAuthUser(null);
+      }
+      setLoading(false);
+    };
+
+    window.addEventListener(SESSION_INVALID_EVENT, onSessionInvalid as EventListener);
+    return () => {
+      window.removeEventListener(SESSION_INVALID_EVENT, onSessionInvalid as EventListener);
+    };
   }, [setAuthUser]);
 
   useEffect(() => {

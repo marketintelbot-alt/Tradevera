@@ -62,6 +62,7 @@ function resolveRequestTimeoutMs(): number {
 const REQUEST_TIMEOUT_MS = resolveRequestTimeoutMs();
 
 let cachedSessionFallbackToken: string | null | undefined;
+const SESSION_INVALID_EVENT = "tradevera:session-invalid";
 
 function decodeBase64UrlJson(value: string): unknown {
   const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
@@ -146,6 +147,13 @@ function hydrateSessionFallbackToken(payload: unknown) {
   if (typeof token === "string" && token.trim().length > 0) {
     setSessionFallbackToken(token);
   }
+}
+
+function notifySessionInvalid() {
+  if (typeof window === "undefined") {
+    return;
+  }
+  window.dispatchEvent(new CustomEvent(SESSION_INVALID_EVENT));
 }
 
 export class ApiError extends Error {
@@ -235,6 +243,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     if (!response.ok) {
       if (response.status === 401) {
         clearFallbackTokenIfStale();
+        notifySessionInvalid();
       }
       const message = typeof data === "object" && data && "error" in data ? String((data as { error: string }).error) : response.statusText;
       throw new ApiError(message, response.status, data);
