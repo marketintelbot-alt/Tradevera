@@ -5,26 +5,79 @@ import { ApiError, api } from "@/lib/api";
 interface AuthContextValue {
   user: UserMe | null;
   loading: boolean;
+  setAuthUser: (nextUser: UserMe | null) => void;
   refreshMe: () => Promise<void>;
   logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
+const USER_CACHE_STORAGE_KEY = "tradevera_user_cache_v1";
+
+function isUserMe(value: unknown): value is UserMe {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+  const candidate = value as Partial<UserMe>;
+  return (
+    typeof candidate.id === "string" &&
+    typeof candidate.email === "string" &&
+    (candidate.plan === "free" || candidate.plan === "starter" || candidate.plan === "pro") &&
+    typeof candidate.tradeCount === "number"
+  );
+}
+
+function readCachedUser(): UserMe | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  try {
+    const raw = window.localStorage.getItem(USER_CACHE_STORAGE_KEY);
+    if (!raw) {
+      return null;
+    }
+    const parsed: unknown = JSON.parse(raw);
+    return isUserMe(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeCachedUser(nextUser: UserMe | null) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    if (nextUser) {
+      window.localStorage.setItem(USER_CACHE_STORAGE_KEY, JSON.stringify(nextUser));
+    } else {
+      window.localStorage.removeItem(USER_CACHE_STORAGE_KEY);
+    }
+  } catch {
+    // Ignore storage failures in restricted browsing modes.
+  }
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<UserMe | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<UserMe | null>(() => readCachedUser());
+  const [loading, setLoading] = useState<boolean>(() => readCachedUser() === null);
+
+  const setAuthUser = useCallback((nextUser: UserMe | null) => {
+    setUser(nextUser);
+    writeCachedUser(nextUser);
+  }, []);
 
   const refreshMe = useCallback(async () => {
     const attempts = 2;
     for (let index = 0; index < attempts; index += 1) {
       try {
         const response = await api.me();
-        setUser(response.user);
+        setAuthUser(response.user);
         return;
       } catch (error) {
         if (error instanceof ApiError && error.status === 401) {
-          setUser(null);
+          setAuthUser(null);
           return;
         }
 
@@ -34,15 +87,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         console.error("Failed to fetch /api/me", error);
-        setUser(null);
       }
     }
-  }, []);
+  }, [setAuthUser]);
 
   const logout = useCallback(async () => {
     await api.logout();
-    setUser(null);
-  }, []);
+    setAuthUser(null);
+  }, [setAuthUser]);
 
   useEffect(() => {
     let isMounted = true;
@@ -65,10 +117,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     () => ({
       user,
       loading,
+      setAuthUser,
       refreshMe,
       logout
     }),
-    [user, loading, refreshMe, logout]
+    [user, loading, setAuthUser, refreshMe, logout]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -12,7 +12,7 @@ import { api } from "@/lib/api";
 
 export function LoginPage() {
   const navigate = useNavigate();
-  const { user, refreshMe } = useAuth();
+  const { user, refreshMe, setAuthUser } = useAuth();
   const [authMode, setAuthMode] = useState<"magic" | "password">("magic");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -150,11 +150,10 @@ export function LoginPage() {
       const loginResult = await api.loginWithPassword(normalizedEmail, password);
       const me = await verifySessionWithRetry(loginResult.sessionToken);
       if (me?.user?.id) {
-        await refreshMe();
-      } else {
-        // Credentials succeeded; continue and let app-shell refresh finalize user state.
-        void refreshMe();
+        setAuthUser(me.user);
       }
+      // Keep profile data fresh in the background without blocking navigation.
+      void refreshMe();
       toast({
         title: "Signed in",
         description: "Welcome back.",

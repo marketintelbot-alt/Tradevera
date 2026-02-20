@@ -12,7 +12,7 @@ export function AuthCallbackPage() {
   const [status, setStatus] = useState<"idle" | "loading">("idle");
   const [temporaryPassword, setTemporaryPassword] = useState<string | null>(null);
   const navigate = useNavigate();
-  const { refreshMe } = useAuth();
+  const { refreshMe, setAuthUser } = useAuth();
   const token = useMemo(() => searchParams.get("token"), [searchParams]);
   const hasToken = Boolean(token && token.trim().length > 0);
 
@@ -56,11 +56,10 @@ export function AuthCallbackPage() {
       const consumeResult = await api.consumeMagicLink(token);
       const me = await verifySessionWithRetry(consumeResult.sessionToken);
       if (me?.user?.id) {
-        await refreshMe();
-      } else {
-        // Token consume succeeded; continue and let app-shell refresh complete in background.
-        void refreshMe();
+        setAuthUser(me.user);
       }
+      // Keep profile data fresh in the background without blocking navigation.
+      void refreshMe();
       if (consumeResult.temporaryPassword) {
         setTemporaryPassword(consumeResult.temporaryPassword);
         return;
