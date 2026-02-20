@@ -43,6 +43,7 @@ function resolveAllowedOrigins(frontendOriginVar: string, appUrlVar: string): st
 app.use("*", async (c, next) => {
   const requestOrigin = c.req.header("Origin");
   const allowedOrigins = resolveAllowedOrigins(c.env.FRONTEND_ORIGIN, c.env.APP_URL);
+  const method = c.req.method;
 
   if (requestOrigin && allowedOrigins.includes(requestOrigin)) {
     c.header("Access-Control-Allow-Origin", requestOrigin);
@@ -54,6 +55,11 @@ app.use("*", async (c, next) => {
 
   if (c.req.method === "OPTIONS") {
     return c.body(null, 204);
+  }
+
+  const isStateChangingMethod = method !== "GET" && method !== "HEAD";
+  if (isStateChangingMethod && requestOrigin && !allowedOrigins.includes(requestOrigin)) {
+    return c.json({ error: "Origin not allowed" }, 403);
   }
 
   await next();

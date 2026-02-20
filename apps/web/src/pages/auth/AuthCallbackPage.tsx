@@ -25,10 +25,18 @@ export function AuthCallbackPage() {
     setStatus("loading");
     try {
       await api.consumeMagicLink(token);
+      const me = await api.me();
+      if (!me?.user?.id) {
+        throw new Error("Session was not established. Request a new login link.");
+      }
       await refreshMe();
       navigate("/app/dashboard", { replace: true });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to authenticate with this link.");
+      const message =
+        err instanceof Error
+          ? err.message
+          : "Unable to authenticate with this link. Request a fresh magic link.";
+      setError(message);
     } finally {
       setStatus("idle");
     }
@@ -54,6 +62,9 @@ export function AuthCallbackPage() {
                 Try again
               </Button>
             </div>
+            <p className="mt-2 text-xs text-ink-700">
+              If this repeats, disable third-party cookie blocking for this site or use a custom domain for both app and API.
+            </p>
           </>
         ) : (
           <div className="mt-4 space-y-3">

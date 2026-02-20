@@ -33,6 +33,24 @@ function shouldUseSecureCookie(requestUrl: string): boolean {
   return protocol === "https:";
 }
 
+function sessionSameSite(requestUrl: string, requestOrigin: string | undefined): "Lax" | "None" {
+  const secure = shouldUseSecureCookie(requestUrl);
+  if (!secure) {
+    return "Lax";
+  }
+
+  if (!requestOrigin) {
+    return "Lax";
+  }
+
+  try {
+    const requestUrlOrigin = new URL(requestUrl).origin;
+    return requestOrigin === requestUrlOrigin ? "Lax" : "None";
+  } catch {
+    return "Lax";
+  }
+}
+
 function unauthorizedResponse(c: Context<AppEnv>) {
   return c.json({ error: "Unauthorized" }, 401);
 }
@@ -74,10 +92,13 @@ async function consumeMagicLinkToken(c: Context<AppEnv>, token: string) {
     c.env.JWT_SECRET
   );
 
+  const secure = shouldUseSecureCookie(c.req.url);
+  const sameSite = sessionSameSite(c.req.url, c.req.header("Origin"));
   c.header(
     "Set-Cookie",
     createSessionCookie(SESSION_COOKIE_NAME, sessionToken, {
-      secure: shouldUseSecureCookie(c.req.url),
+      secure,
+      sameSite,
       maxAgeSeconds: SESSION_MAX_AGE_SECONDS
     })
   );
@@ -198,7 +219,9 @@ export function registerAuthRoutes(app: import("hono").Hono<AppEnv>) {
 
     await incrementUserSessionVersion(c.env.DB, auth.id);
 
-    c.header("Set-Cookie", clearSessionCookie(SESSION_COOKIE_NAME, shouldUseSecureCookie(c.req.url)));
+    const secure = shouldUseSecureCookie(c.req.url);
+    const sameSite = sessionSameSite(c.req.url, c.req.header("Origin"));
+    c.header("Set-Cookie", clearSessionCookie(SESSION_COOKIE_NAME, secure, sameSite));
     return c.json({ success: true });
   });
 }

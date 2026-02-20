@@ -87,14 +87,16 @@ export function parseCookie(cookieHeader: string | undefined, name: string): str
 interface SessionCookieOptions {
   secure: boolean;
   maxAgeSeconds: number;
+  sameSite?: "Lax" | "None";
 }
 
 export function createSessionCookie(name: string, token: string, options: SessionCookieOptions): string {
+  const sameSite = options.sameSite ?? "Lax";
   const parts = [
     `${name}=${encodeURIComponent(token)}`,
     "Path=/",
     "HttpOnly",
-    "SameSite=Lax",
+    `SameSite=${sameSite}`,
     `Max-Age=${Math.max(0, Math.floor(options.maxAgeSeconds))}`
   ];
 
@@ -105,8 +107,8 @@ export function createSessionCookie(name: string, token: string, options: Sessio
   return parts.join("; ");
 }
 
-export function clearSessionCookie(name: string, secure: boolean): string {
-  const parts = [`${name}=`, "Path=/", "HttpOnly", "SameSite=Lax", "Max-Age=0"];
+export function clearSessionCookie(name: string, secure: boolean, sameSite: "Lax" | "None" = "Lax"): string {
+  const parts = [`${name}=`, "Path=/", "HttpOnly", `SameSite=${sameSite}`, "Max-Age=0"];
   if (secure) {
     parts.push("Secure");
   }

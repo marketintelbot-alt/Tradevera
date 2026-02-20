@@ -353,8 +353,9 @@ VITE_ADSENSE_SLOT_TRADES=<slot-id>
 ## Security Notes
 
 - Stripe webhook signatures are verified before processing.
-- Session cookie is `HttpOnly` + `SameSite=Lax` + `Secure` on HTTPS.
+- Session cookie is `HttpOnly`; `Secure` on HTTPS; `SameSite` is set dynamically (`None` for cross-origin app/API deployments, `Lax` otherwise).
 - JWT revocation supported via `users.session_version`.
+- State-changing browser requests enforce allowed `Origin` values from `FRONTEND_ORIGIN` / `APP_URL`.
 - API auth middleware protects `/api/*` with explicit public exceptions:
   - `/api/stripe/webhook`
   - `/api/stripe/create-checkout-session` (handler still enforces auth)
