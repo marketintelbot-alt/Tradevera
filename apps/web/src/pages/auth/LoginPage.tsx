@@ -162,11 +162,32 @@ export function LoginPage() {
       });
       navigate("/app/dashboard", { replace: true });
     } catch (error) {
+      const message = error instanceof Error ? error.message : "Invalid credentials.";
+      const sessionHandshakeIssue = /unable to establish a login session|session cookie was blocked/i.test(message);
+      if (sessionHandshakeIssue) {
+        try {
+          if ("serviceWorker" in navigator) {
+            const registrations = await navigator.serviceWorker.getRegistrations();
+            await Promise.all(registrations.map((registration) => registration.unregister()));
+          }
+          if ("caches" in window) {
+            const cacheKeys = await caches.keys();
+            await Promise.all(cacheKeys.map((key) => caches.delete(key)));
+          }
+        } catch {
+          // Continue regardless; the user can still retry manually.
+        }
+      }
       toast({
         title: "Login failed",
-        description: error instanceof Error ? error.message : "Invalid credentials.",
+        description: sessionHandshakeIssue
+          ? "Session handshake issue detected. Refreshing login state, then try once more."
+          : message,
         tone: "error"
       });
+      if (sessionHandshakeIssue) {
+        window.setTimeout(() => window.location.reload(), 200);
+      }
     } finally {
       setPasswordLoading(false);
     }

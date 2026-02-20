@@ -13,12 +13,38 @@ import type {
   TradesResponse
 } from "@tradevera/shared";
 
+const DEFAULT_API_BASE_URL = "http://127.0.0.1:8787";
+
+function trimWrappingQuotes(value: string): string {
+  if (value.length < 2) {
+    return value;
+  }
+
+  const first = value[0];
+  const last = value[value.length - 1];
+  const matchingQuote = (first === `"` && last === `"`) || (first === "'" && last === "'") || (first === "`" && last === "`");
+  return matchingQuote ? value.slice(1, -1) : value;
+}
+
 function resolveApiBaseUrl(value: string | undefined): string {
-  const normalized = (value ?? "").trim().replace(/\/+$/, "");
-  if (normalized.length > 0) {
+  const normalized = trimWrappingQuotes((value ?? "").trim()).trim().replace(/\/+$/, "");
+  if (normalized.length === 0) {
+    return DEFAULT_API_BASE_URL;
+  }
+
+  if (normalized.startsWith("/")) {
     return normalized;
   }
-  return "http://127.0.0.1:8787";
+
+  if (/^https?:\/\//i.test(normalized)) {
+    return normalized;
+  }
+
+  if (/^[a-z0-9.-]+(?::\d+)?(?:\/.*)?$/i.test(normalized)) {
+    return `https://${normalized}`.replace(/\/+$/, "");
+  }
+
+  return DEFAULT_API_BASE_URL;
 }
 
 const API_BASE_URL = resolveApiBaseUrl(import.meta.env.VITE_API_BASE_URL);
@@ -91,9 +117,26 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     headers.set("Content-Type", "application/json");
   }
 
-  const fallbackToken = getSessionFallbackToken();
-  if (fallbackToken && !headers.has("Authorization")) {
-    headers.set("Authorization", `Bearer ${fallbackToken}`);
+  const hadAuthorizationHeader = headers.has("Authorization");
+  const fallbackTokenAtRequestStart = getSessionFallbackToken();
+  if (fallbackTokenAtRequestStart && !hadAuthorizationHeader) {
+    headers.set("Authorization", `Bearer ${fallbackTokenAtRequestStart}`);
+  }
+
+  const authorizationHeader = headers.get("Authorization");
+  const authorizationMatch = authorizationHeader?.match(/^Bearer\s+(.+)$/i);
+  const authorizationTokenUsed = authorizationMatch ? authorizationMatch[1].trim() : null;
+  const implicitFallbackTokenUsed = !hadAuthorizationHeader ? fallbackTokenAtRequestStart : null;
+
+  const clearFallbackTokenIfStale = () => {
+    const currentFallbackToken = getSessionFallbackToken();
+    const tokenUsedByRequest = authorizationTokenUsed ?? implicitFallbackTokenUsed;
+    if (!currentFallbackToken || !tokenUsedByRequest) {
+      return;
+    }
+    if (currentFallbackToken === tokenUsedByRequest) {
+      setSessionFallbackToken(null);
+    }
   }
 
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
@@ -117,7 +160,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
   if (!response.ok) {
     if (response.status === 401) {
-      setSessionFallbackToken(null);
+      clearFallbackTokenIfStale();
     }
     const message = typeof data === "object" && data && "error" in data ? String((data as { error: string }).error) : response.statusText;
     throw new ApiError(message, response.status, data);
