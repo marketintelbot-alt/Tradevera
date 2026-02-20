@@ -105,7 +105,7 @@ function hasRecentAuthMarker(): boolean {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<UserMe | null>(() => readCachedUser());
-  const [loading, setLoading] = useState<boolean>(() => readCachedUser() === null);
+  const [loading, setLoading] = useState<boolean>(true);
   const refreshVersionRef = useRef(0);
   const userRef = useRef<UserMe | null>(user);
 

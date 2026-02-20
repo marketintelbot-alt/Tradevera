@@ -243,7 +243,9 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     if (!response.ok) {
       if (response.status === 401) {
         clearFallbackTokenIfStale();
-        notifySessionInvalid();
+        if (!hadAuthorizationHeader) {
+          notifySessionInvalid();
+        }
       }
       const message = typeof data === "object" && data && "error" in data ? String((data as { error: string }).error) : response.statusText;
       throw new ApiError(message, response.status, data);

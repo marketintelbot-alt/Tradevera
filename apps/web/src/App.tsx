@@ -46,7 +46,7 @@ function ProtectedShell() {
   }, [loading, refreshMe, sessionChecked, user, verifyingSession]);
 
   useEffect(() => {
-    const shouldWatch = (loading && !user) || verifyingSession || (!user && !sessionChecked);
+    const shouldWatch = loading || verifyingSession || (!user && !sessionChecked);
     if (!shouldWatch) {
       setStalled(false);
       return;
@@ -94,7 +94,7 @@ function ProtectedShell() {
     );
   }
 
-  if ((loading && !user) || verifyingSession || (!user && !sessionChecked)) {
+  if (loading || verifyingSession || (!user && !sessionChecked)) {
     return (
       <div className="mx-auto mt-24 w-full max-w-xl space-y-4 px-4">
         <Skeleton className="h-14 w-full" />

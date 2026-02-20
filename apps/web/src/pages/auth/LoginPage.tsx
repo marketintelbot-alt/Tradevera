@@ -13,7 +13,7 @@ import { api, decodeSessionTokenClaims } from "@/lib/api";
 
 export function LoginPage() {
   const navigate = useNavigate();
-  const { user, refreshMe, setAuthUser } = useAuth();
+  const { user, loading: authLoading, refreshMe, setAuthUser } = useAuth();
   const [authMode, setAuthMode] = useState<"magic" | "password">("magic");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -58,10 +58,10 @@ export function LoginPage() {
   }, [loading, sent, requestId]);
 
   useEffect(() => {
-    if (user?.id) {
+    if (!authLoading && user?.id) {
       navigate("/app/dashboard", { replace: true });
     }
-  }, [navigate, user?.id]);
+  }, [authLoading, navigate, user?.id]);
 
   const verifySessionWithRetry = async (sessionToken?: string) => {
     if (sessionToken) {
