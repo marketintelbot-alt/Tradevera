@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { Button } from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useAuth } from "@/context/AuthContext";
 import { AssistantPage } from "@/pages/app/AssistantPage";
@@ -20,6 +21,7 @@ function ProtectedShell() {
   const { user, loading, refreshMe } = useAuth();
   const [verifyingSession, setVerifyingSession] = useState(false);
   const [sessionChecked, setSessionChecked] = useState(false);
+  const [stalled, setStalled] = useState(false);
 
   useEffect(() => {
     if (loading) {
@@ -49,6 +51,55 @@ function ProtectedShell() {
       active = false;
     };
   }, [loading, refreshMe, sessionChecked, user, verifyingSession]);
+
+  useEffect(() => {
+    const shouldWatch = loading || verifyingSession || (!user && !sessionChecked);
+    if (!shouldWatch) {
+      setStalled(false);
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setStalled(true);
+    }, 9000);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [loading, sessionChecked, user, verifyingSession]);
+
+  if (stalled) {
+    return (
+      <div className="mx-auto mt-24 w-full max-w-xl space-y-4 px-4">
+        <div className="rounded-xl border border-amber-500/35 bg-amber-100 p-4">
+          <p className="text-sm font-semibold text-ink-900">Session is taking longer than expected.</p>
+          <p className="mt-1 text-sm text-ink-800">
+            We did not receive a profile response in time. Retry now, or go back to login and sign in again.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setStalled(false);
+                setSessionChecked(false);
+                setVerifyingSession(false);
+                void refreshMe();
+              }}
+            >
+              Retry session
+            </Button>
+            <Button
+              onClick={() => {
+                window.location.assign("/login");
+              }}
+            >
+              Go to login
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (loading || verifyingSession || (!user && !sessionChecked)) {
     return (

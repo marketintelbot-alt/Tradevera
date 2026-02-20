@@ -49,6 +49,17 @@ function resolveApiBaseUrl(value: string | undefined): string {
 
 const API_BASE_URL = resolveApiBaseUrl(import.meta.env.VITE_API_BASE_URL);
 const SESSION_FALLBACK_STORAGE_KEY = "tradevera_session_fallback";
+const DEFAULT_REQUEST_TIMEOUT_MS = 6500;
+
+function resolveRequestTimeoutMs(): number {
+  const raw = Number(import.meta.env.VITE_API_TIMEOUT_MS);
+  if (Number.isFinite(raw) && raw >= 1000) {
+    return Math.floor(raw);
+  }
+  return DEFAULT_REQUEST_TIMEOUT_MS;
+}
+
+const REQUEST_TIMEOUT_MS = resolveRequestTimeoutMs();
 
 let cachedSessionFallbackToken: string | null | undefined;
 
@@ -140,33 +151,64 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   }
 
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
-  const response = await fetch(`${API_BASE_URL}${normalizedPath}`, {
-    ...init,
-    credentials: "include",
-    headers,
-    cache: "no-store"
-  });
+  const timeoutController = new AbortController();
+  const forwardedSignal = init?.signal;
+  const forwardAbort = () => {
+    timeoutController.abort();
+  };
 
-  const rawBody = await response.text();
-  let data: unknown = rawBody;
-  if (rawBody.length > 0) {
-    try {
-      data = JSON.parse(rawBody);
-    } catch {
-      data = rawBody;
+  if (forwardedSignal) {
+    if (forwardedSignal.aborted) {
+      timeoutController.abort();
+    } else {
+      forwardedSignal.addEventListener("abort", forwardAbort, { once: true });
     }
   }
-  hydrateSessionFallbackToken(data);
 
-  if (!response.ok) {
-    if (response.status === 401) {
-      clearFallbackTokenIfStale();
+  const timeoutHandle = window.setTimeout(() => {
+    timeoutController.abort();
+  }, REQUEST_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(`${API_BASE_URL}${normalizedPath}`, {
+      ...init,
+      credentials: "include",
+      headers,
+      cache: "no-store",
+      signal: timeoutController.signal
+    });
+
+    const rawBody = await response.text();
+    let data: unknown = rawBody;
+    if (rawBody.length > 0) {
+      try {
+        data = JSON.parse(rawBody);
+      } catch {
+        data = rawBody;
+      }
     }
-    const message = typeof data === "object" && data && "error" in data ? String((data as { error: string }).error) : response.statusText;
-    throw new ApiError(message, response.status, data);
-  }
+    hydrateSessionFallbackToken(data);
 
-  return data as T;
+    if (!response.ok) {
+      if (response.status === 401) {
+        clearFallbackTokenIfStale();
+      }
+      const message = typeof data === "object" && data && "error" in data ? String((data as { error: string }).error) : response.statusText;
+      throw new ApiError(message, response.status, data);
+    }
+
+    return data as T;
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new ApiError("Request timed out. Please check your connection and try again.", 408);
+    }
+    throw error;
+  } finally {
+    window.clearTimeout(timeoutHandle);
+    if (forwardedSignal) {
+      forwardedSignal.removeEventListener("abort", forwardAbort);
+    }
+  }
 }
 
 export interface TradeFilters {

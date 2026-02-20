@@ -16,7 +16,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const refreshMe = useCallback(async () => {
-    const attempts = 3;
+    const attempts = 2;
     for (let index = 0; index < attempts; index += 1) {
       try {
         const response = await api.me();
@@ -29,11 +29,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         if (index < attempts - 1) {
-          await new Promise((resolve) => window.setTimeout(resolve, 220 * (index + 1)));
+          await new Promise((resolve) => window.setTimeout(resolve, 180 * (index + 1)));
           continue;
         }
 
         console.error("Failed to fetch /api/me", error);
+        setUser(null);
       }
     }
   }, []);
