@@ -17,7 +17,9 @@ function loadAdSenseScript(clientId: string) {
     return;
   }
 
-  const existing = document.querySelector<HTMLScriptElement>("script[data-tradevera-adsense='true']");
+  const existing = document.querySelector<HTMLScriptElement>(
+    "script[data-tradevera-adsense='true'], script[data-tradevera-adsense-global='true'], script[src*='pagead2.googlesyndication.com/pagead/js/adsbygoogle.js']"
+  );
   if (existing) {
     window.__tradeveraAdsenseLoaded = true;
     return;
@@ -44,8 +46,15 @@ function unloadAdSenseArtifacts() {
   const autoPlaced = document.querySelectorAll<HTMLElement>(".google-auto-placed, [id^='aswift_']");
   autoPlaced.forEach((node) => node.remove());
 
-  window.__tradeveraAdsenseLoaded = false;
-  window.adsbygoogle = [];
+  const hasAdSenseScript = Boolean(
+    document.querySelector<HTMLScriptElement>(
+      "script[data-tradevera-adsense='true'], script[data-tradevera-adsense-global='true'], script[src*='pagead2.googlesyndication.com/pagead/js/adsbygoogle.js']"
+    )
+  );
+  window.__tradeveraAdsenseLoaded = hasAdSenseScript;
+  if (!hasAdSenseScript) {
+    window.adsbygoogle = [];
+  }
 }
 
 interface AdSlotProps {
