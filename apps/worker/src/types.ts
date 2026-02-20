@@ -27,6 +27,7 @@ export interface AuthUser {
 export interface SessionJwtPayload {
   sub: string;
   email: string;
+  plan?: "free" | "starter" | "pro";
   session_version: number;
   iat: number;
   exp: number;

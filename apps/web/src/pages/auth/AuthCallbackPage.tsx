@@ -52,18 +52,19 @@ export function AuthCallbackPage() {
     if (!claims) {
       return null;
     }
+    const isFree = claims.plan !== "starter" && claims.plan !== "pro";
 
     return {
       id: claims.sub,
       email: claims.email,
-      plan: "free",
+      plan: isFree ? "free" : claims.plan!,
       tradeCount: 0,
-      tradeLimit: 50,
-      freeDaysTotal: 50,
+      tradeLimit: isFree ? 50 : null,
+      freeDaysTotal: isFree ? 50 : null,
       freeDaysRemaining: null,
       freeExpiresAt: null,
       freeExpired: false,
-      canUseProFeatures: false
+      canUseProFeatures: claims.plan === "pro"
     };
   };
 

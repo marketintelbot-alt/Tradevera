@@ -70,19 +70,28 @@ function decodeBase64UrlJson(value: string): unknown {
   return JSON.parse(json);
 }
 
-export function decodeSessionTokenClaims(token: string): { sub: string; email: string; exp?: number; iat?: number } | null {
+export function decodeSessionTokenClaims(
+  token: string
+): { sub: string; email: string; plan?: "free" | "starter" | "pro"; exp?: number; iat?: number } | null {
   const parts = token.split(".");
   if (parts.length !== 3) {
     return null;
   }
   try {
-    const payload = decodeBase64UrlJson(parts[1]) as { sub?: unknown; email?: unknown; exp?: unknown; iat?: unknown };
+    const payload = decodeBase64UrlJson(parts[1]) as {
+      sub?: unknown;
+      email?: unknown;
+      plan?: unknown;
+      exp?: unknown;
+      iat?: unknown;
+    };
     if (typeof payload.sub !== "string" || typeof payload.email !== "string") {
       return null;
     }
     return {
       sub: payload.sub,
       email: payload.email,
+      ...(payload.plan === "free" || payload.plan === "starter" || payload.plan === "pro" ? { plan: payload.plan } : {}),
       exp: typeof payload.exp === "number" ? payload.exp : undefined,
       iat: typeof payload.iat === "number" ? payload.iat : undefined
     };
@@ -168,8 +177,14 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const implicitFallbackTokenUsed = !hadAuthorizationHeader ? fallbackTokenAtRequestStart : null;
 
   const clearFallbackTokenIfStale = () => {
+    // Do not clear globally when an explicit bearer token is supplied by caller.
+    // Explicit token checks (for example immediate post-login probes) can race and
+    // would otherwise wipe a fresh fallback token.
+    if (hadAuthorizationHeader) {
+      return;
+    }
     const currentFallbackToken = getSessionFallbackToken();
-    const tokenUsedByRequest = authorizationTokenUsed ?? implicitFallbackTokenUsed;
+    const tokenUsedByRequest = implicitFallbackTokenUsed;
     if (!currentFallbackToken || !tokenUsedByRequest) {
       return;
     }

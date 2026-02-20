@@ -103,6 +103,7 @@ async function setSessionCookie(c: Context<AppEnv>, user: UserRow): Promise<stri
     {
       sub: user.id,
       email: user.email,
+      plan: user.plan,
       session_version: user.session_version,
       iat: nowSeconds,
       exp: nowSeconds + SESSION_MAX_AGE_SECONDS

@@ -100,7 +100,7 @@ export function LoginPage() {
     }
 
     const sameCachedUser = user && user.email.toLowerCase() === claims.email.toLowerCase() ? user : null;
-    const plan = sameCachedUser?.plan ?? "free";
+    const plan = claims.plan ?? sameCachedUser?.plan ?? "free";
     return {
       id: claims.sub,
       email: claims.email || fallbackEmail,

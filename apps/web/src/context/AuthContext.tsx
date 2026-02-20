@@ -12,6 +12,8 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 const USER_CACHE_STORAGE_KEY = "tradevera_user_cache_v1";
+const RECENT_AUTH_STORAGE_KEY = "tradevera_recent_auth_at";
+const RECENT_AUTH_WINDOW_MS = 2 * 60 * 1000;
 
 function isUserMe(value: unknown): value is UserMe {
   if (!value || typeof value !== "object") {
@@ -59,6 +61,47 @@ function writeCachedUser(nextUser: UserMe | null) {
   }
 }
 
+function markRecentAuthNow() {
+  if (typeof window === "undefined") {
+    return;
+  }
+  try {
+    window.sessionStorage.setItem(RECENT_AUTH_STORAGE_KEY, String(Date.now()));
+  } catch {
+    // Ignore storage failures in restricted browsing modes.
+  }
+}
+
+function clearRecentAuthMarker() {
+  if (typeof window === "undefined") {
+    return;
+  }
+  try {
+    window.sessionStorage.removeItem(RECENT_AUTH_STORAGE_KEY);
+  } catch {
+    // Ignore storage failures in restricted browsing modes.
+  }
+}
+
+function hasRecentAuthMarker(): boolean {
+  if (typeof window === "undefined") {
+    return false;
+  }
+  try {
+    const raw = window.sessionStorage.getItem(RECENT_AUTH_STORAGE_KEY);
+    if (!raw) {
+      return false;
+    }
+    const timestamp = Number(raw);
+    if (!Number.isFinite(timestamp)) {
+      return false;
+    }
+    return Date.now() - timestamp <= RECENT_AUTH_WINDOW_MS;
+  } catch {
+    return false;
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<UserMe | null>(() => readCachedUser());
   const [loading, setLoading] = useState<boolean>(() => readCachedUser() === null);
@@ -67,6 +110,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const setAuthUser = useCallback((nextUser: UserMe | null) => {
     setUser(nextUser);
     writeCachedUser(nextUser);
+    if (nextUser) {
+      markRecentAuthNow();
+    } else {
+      clearRecentAuthMarker();
+    }
   }, []);
 
   const refreshMe = useCallback(async () => {
@@ -88,6 +136,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         if (error instanceof ApiError && error.status === 401) {
+          if (user && hasRecentAuthMarker()) {
+            // Avoid immediate bounce-to-login from transient auth propagation races.
+            return;
+          }
           setAuthUser(null);
           return;
         }
@@ -100,7 +152,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.error("Failed to fetch /api/me", error);
       }
     }
-  }, [setAuthUser]);
+  }, [setAuthUser, user]);
 
   const logout = useCallback(async () => {
     refreshVersionRef.current += 1;
