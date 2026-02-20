@@ -148,10 +148,17 @@ export const api = {
     });
   },
 
-  async createCheckoutSession(priceId?: string): Promise<{ checkoutUrl: string; id: string }> {
+  async createCheckoutSession(options?: {
+    tier?: "starter" | "pro";
+    priceId?: string;
+  }): Promise<{ checkoutUrl: string; id: string }> {
+    const payload = {
+      ...(options?.tier ? { tier: options.tier } : {}),
+      ...(options?.priceId ? { priceId: options.priceId } : {})
+    };
     return request("/api/stripe/create-checkout-session", {
       method: "POST",
-      body: JSON.stringify(priceId ? { priceId } : {})
+      body: JSON.stringify(payload)
     });
   },
 

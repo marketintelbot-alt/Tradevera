@@ -11,7 +11,7 @@ export function SettingsPage() {
   const { user, refreshMe } = useAuth();
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
-  const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [checkoutLoadingTier, setCheckoutLoadingTier] = useState<"starter" | "pro" | null>(null);
   const [portalLoading, setPortalLoading] = useState(false);
 
   const success = searchParams.get("success") === "1";
@@ -24,7 +24,7 @@ export function SettingsPage() {
       });
       toast({
         title: "Subscription payment completed",
-        description: "Your Pro plan will activate as soon as Stripe webhook is received.",
+        description: "Your paid plan will activate as soon as Stripe webhook is received.",
         tone: "success"
       });
     }
@@ -46,10 +46,10 @@ export function SettingsPage() {
     return Math.min(100, Math.round((used / user.freeDaysTotal) * 100));
   }, [user?.freeDaysRemaining, user?.freeDaysTotal]);
 
-  const startCheckout = async () => {
-    setCheckoutLoading(true);
+  const startCheckout = async (tier: "starter" | "pro") => {
+    setCheckoutLoadingTier(tier);
     try {
-      const { checkoutUrl } = await api.createCheckoutSession();
+      const { checkoutUrl } = await api.createCheckoutSession({ tier });
       window.location.href = checkoutUrl;
     } catch (error) {
       const details =
@@ -67,7 +67,7 @@ export function SettingsPage() {
         tone: "error"
       });
     } finally {
-      setCheckoutLoading(false);
+      setCheckoutLoadingTier(null);
     }
   };
 
@@ -97,7 +97,13 @@ export function SettingsPage() {
         <CardHeader title="Plan & Billing" subtitle="Manage your subscription and feature access." />
 
         <div className="flex items-center gap-3">
-          {user.plan === "pro" ? <Badge tone="success">Pro active</Badge> : <Badge tone="warning">Free plan</Badge>}
+          {user.plan === "pro" ? (
+            <Badge tone="success">Pro active</Badge>
+          ) : user.plan === "starter" ? (
+            <Badge tone="accent">Starter active</Badge>
+          ) : (
+            <Badge tone="warning">Free plan</Badge>
+          )}
           <span className="text-sm text-ink-700">Logged in as {user.email}</span>
         </div>
 
@@ -130,10 +136,34 @@ export function SettingsPage() {
               </p>
             </div>
 
-            <p className="text-sm text-ink-700">Pro removes the 50-day/50-trade limits, unlocks AI Assistant + advanced analytics, and removes ads.</p>
-            <Button onClick={startCheckout} loading={checkoutLoading}>
-              Upgrade to Pro
-            </Button>
+            <p className="text-sm text-ink-700">
+              Starter removes ads and free limits. Pro adds AI Assistant, weekly review exports, and advanced analytics.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="secondary"
+                onClick={() => void startCheckout("starter")}
+                loading={checkoutLoadingTier === "starter"}
+              >
+                Upgrade to Starter ($9.99)
+              </Button>
+              <Button onClick={() => void startCheckout("pro")} loading={checkoutLoadingTier === "pro"}>
+                Upgrade to Pro
+              </Button>
+            </div>
+          </div>
+        ) : user.plan === "starter" ? (
+          <div className="mt-4 space-y-3 rounded-xl border border-mint-500/35 bg-mint-100/55 p-4 text-sm text-ink-900">
+            <p>Starter is active. Ads are removed and free limits are lifted.</p>
+            <p>Upgrade to Pro whenever you want AI Assistant, advanced analytics, and weekly review PDF exports.</p>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="secondary" loading={portalLoading} onClick={openBillingPortal}>
+                Manage billing
+              </Button>
+              <Button onClick={() => void startCheckout("pro")} loading={checkoutLoadingTier === "pro"}>
+                Upgrade to Pro
+              </Button>
+            </div>
           </div>
         ) : (
           <div className="mt-4 space-y-3 rounded-xl border border-mint-500/40 bg-mint-100/60 p-4 text-sm text-ink-900">

@@ -257,9 +257,11 @@ export function TradesPage() {
       </Modal>
 
       <Modal open={limitModalOpen} onClose={() => setLimitModalOpen(false)} title="Free plan limit reached">
-        <p className="text-sm text-ink-700">Free plan limited to 50 trades. Upgrade to Pro for unlimited entries and advanced analytics.</p>
+        <p className="text-sm text-ink-700">
+          Free plan limited to 50 trades. Upgrade to Starter or Pro for expanded limits and ad-free journaling.
+        </p>
         <div className="mt-4 flex gap-2">
-          <Button onClick={() => navigate("/app/settings")}>Upgrade to Pro</Button>
+          <Button onClick={() => navigate("/app/settings")}>See upgrade options</Button>
           <Button variant="secondary" onClick={() => setLimitModalOpen(false)}>Close</Button>
         </div>
       </Modal>

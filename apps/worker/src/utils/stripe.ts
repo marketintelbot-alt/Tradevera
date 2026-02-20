@@ -13,6 +13,7 @@ export interface StripePortalSessionResult {
 interface CreateCheckoutOptions {
   stripeSecretKey: string;
   priceId: string;
+  planTier?: "starter" | "pro";
   successUrl: string;
   cancelUrl: string;
   userId: string;
@@ -46,7 +47,7 @@ async function stripeRequestJson<T>(
   return payload;
 }
 
-async function resolveCheckoutPriceId(stripeSecretKey: string, configuredId: string): Promise<string> {
+export async function resolveCheckoutPriceId(stripeSecretKey: string, configuredId: string): Promise<string> {
   if (configuredId.startsWith("price_")) {
     return configuredId;
   }
@@ -101,6 +102,10 @@ export async function createStripeCheckoutSession(options: CreateCheckoutOptions
   form.set("metadata[user_id]", options.userId);
   form.set("metadata[email]", options.email);
   form.set("metadata[price_id]", resolvedPriceId);
+  if (options.planTier) {
+    form.set("metadata[plan_tier]", options.planTier);
+    form.set("subscription_data[metadata][plan_tier]", options.planTier);
+  }
   form.set("subscription_data[metadata][user_id]", options.userId);
   form.set("subscription_data[metadata][email]", options.email);
 

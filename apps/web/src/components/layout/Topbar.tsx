@@ -46,11 +46,17 @@ export function Topbar({ onMobileMenu }: TopbarProps) {
             {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             <span className="hidden sm:inline">{theme === "dark" ? "Light" : "Dark"}</span>
           </Button>
-          {user?.plan === "pro" ? <Badge tone="success">Pro</Badge> : <Badge tone="warning">Free</Badge>}
-          {user?.plan === "free" && (
+          {user?.plan === "pro" ? (
+            <Badge tone="success">Pro</Badge>
+          ) : user?.plan === "starter" ? (
+            <Badge tone="accent">Starter</Badge>
+          ) : (
+            <Badge tone="warning">Free</Badge>
+          )}
+          {(user?.plan === "free" || user?.plan === "starter") && (
             <Link to="/app/settings">
               <Button size="sm" className="gap-2">
-                <Crown className="h-4 w-4" /> Upgrade
+                <Crown className="h-4 w-4" /> {user?.plan === "starter" ? "Go Pro" : "Upgrade"}
               </Button>
             </Link>
           )}

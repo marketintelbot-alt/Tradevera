@@ -3,7 +3,7 @@ import { nowIso } from "./security";
 export interface UserRow {
   id: string;
   email: string;
-  plan: "free" | "pro";
+  plan: "free" | "starter" | "pro";
   created_at: string;
   session_version: number;
   password_hash: string | null;

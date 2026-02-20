@@ -1,4 +1,4 @@
-export const PLAN_VALUES = ["free", "pro"] as const;
+export const PLAN_VALUES = ["free", "starter", "pro"] as const;
 export type Plan = (typeof PLAN_VALUES)[number];
 
 export const ASSET_CLASS_VALUES = ["stocks", "options", "futures", "crypto", "forex"] as const;

@@ -119,6 +119,7 @@ export const tradeListQuerySchema = z.object({
 });
 
 export const checkoutSchema = z.object({
+  tier: z.enum(["starter", "pro"]).optional(),
   priceId: z.string().min(1).optional()
 });
 

@@ -115,8 +115,8 @@ export function LandingPage() {
 
         <section className="mt-14">
           <h2 className="text-2xl font-semibold text-ink-900">Pricing</h2>
-          <p className="mt-2 text-sm text-ink-700">Start free. Upgrade when you want advanced analytics and review workflows.</p>
-          <div className="mt-5 grid gap-4 md:grid-cols-2">
+          <p className="mt-2 text-sm text-ink-700">Start free, grow into Starter, and unlock full Pro tooling when ready.</p>
+          <div className="mt-5 grid gap-4 lg:grid-cols-3">
             <Card>
               <h3 className="text-xl font-semibold text-ink-900">Free</h3>
               <p className="mt-1 text-sm text-ink-700">Perfect for getting started</p>
@@ -129,6 +129,19 @@ export function LandingPage() {
                 <li>Cloud sync across devices</li>
                 <li>Subtle ads on dashboard/list views</li>
                 <li>AI Assistant locked (upgrade to Pro)</li>
+              </ul>
+            </Card>
+            <Card>
+              <h3 className="text-xl font-semibold text-ink-900">Starter</h3>
+              <p className="mt-1 text-sm text-ink-700">For active traders building consistency</p>
+              <p className="mt-5 text-3xl font-semibold text-ink-900">$9.99/mo</p>
+              <ul className="mt-4 space-y-2 text-sm text-ink-800">
+                <li>No ads</li>
+                <li>No 50-day/50-trade free caps</li>
+                <li>Cloud sync across devices</li>
+                <li>Core dashboard + journaling workflows</li>
+                <li>Projects + tasks workspace</li>
+                <li>Upgrade to Pro any time</li>
               </ul>
             </Card>
             <Card className="border-ink-900 bg-ink-900 text-white">

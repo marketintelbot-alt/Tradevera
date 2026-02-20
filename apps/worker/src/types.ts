@@ -5,6 +5,7 @@ export interface Env {
   STRIPE_SECRET_KEY: string;
   STRIPE_WEBHOOK_SECRET: string;
   STRIPE_PRICE_ID_PRO?: string;
+  STRIPE_PRICE_ID_STARTER?: string;
   STRIPE_PRICE_PRO?: string;
   STRIPE_PRICE_STARTER?: string;
   RESEND_API_KEY: string;
@@ -18,7 +19,7 @@ export interface Env {
 export interface AuthUser {
   id: string;
   email: string;
-  plan: "free" | "pro";
+  plan: "free" | "starter" | "pro";
   createdAt: string;
   sessionVersion: number;
 }

@@ -290,7 +290,7 @@ export function ProjectsPage() {
       if (error instanceof ApiError && error.status === 402) {
         toast({
           title: "Free plan expired",
-          description: "Free plan access is capped at 50 days. Upgrade to Pro to continue creating tasks.",
+          description: "Free plan access is capped at 50 days. Upgrade to Starter or Pro to continue creating tasks.",
           tone: "error"
         });
         return;

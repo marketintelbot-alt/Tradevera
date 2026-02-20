@@ -211,7 +211,7 @@ export function registerTradeRoutes(app: Hono<AppEnv>) {
     if (auth.plan === "free") {
       const tradeCount = await countTradesByUser(c.env.DB, auth.id);
       if (tradeCount >= FREE_TRADE_LIMIT) {
-        return c.json({ error: "Free plan limited to 50 trades. Upgrade to Pro." }, 402);
+        return c.json({ error: "Free plan limited to 50 trades. Upgrade to Starter or Pro." }, 402);
       }
     }
 

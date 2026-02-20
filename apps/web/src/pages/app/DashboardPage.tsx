@@ -91,7 +91,10 @@ export function DashboardPage() {
           </div>
         ) : (
           <Card>
-            <CardHeader title="Pro snapshot" subtitle="Premium model diagnostics" />
+            <CardHeader
+              title={user?.plan === "starter" ? "Starter snapshot" : "Pro snapshot"}
+              subtitle={user?.plan === "starter" ? "Paid plan diagnostics" : "Premium model diagnostics"}
+            />
             <div className="space-y-2 text-sm text-ink-800">
               <p>Profit factor: <strong>{formatNumber(pro.profitFactor, 2)}</strong></p>
               <p>Expectancy: <strong>{formatCurrency(pro.expectancy)}</strong></p>

@@ -5,10 +5,17 @@ import { requireAuth } from "./auth";
 import { getUserByEmail, getUserById, findUserIdBySubscriptionCustomer, getLatestSubscriptionByUser } from "./utils/db";
 import { sendProWelcomeEmail } from "./utils/email";
 import { isLifetimeProEmail } from "./utils/lifetime";
-import { createStripeCheckoutSession, createStripePortalSession, verifyStripeWebhookSignature } from "./utils/stripe";
+import {
+  createStripeCheckoutSession,
+  createStripePortalSession,
+  resolveCheckoutPriceId,
+  verifyStripeWebhookSignature
+} from "./utils/stripe";
 import { nowIso } from "./utils/security";
 
 const ACTIVE_STATUSES = new Set(["active", "trialing", "past_due"]);
+type PaidPlan = "starter" | "pro";
+type UserPlan = "free" | PaidPlan;
 
 interface StripeEvent {
   id: string;
@@ -22,18 +29,120 @@ function resolveProPriceId(env: AppEnv["Bindings"]): string | null {
   return env.STRIPE_PRICE_ID_PRO ?? env.STRIPE_PRICE_PRO ?? null;
 }
 
+function resolveStarterPriceId(env: AppEnv["Bindings"]): string | null {
+  return env.STRIPE_PRICE_ID_STARTER ?? env.STRIPE_PRICE_STARTER ?? null;
+}
+
+function parsePaidPlan(value: string | undefined | null): PaidPlan | null {
+  if (!value) {
+    return null;
+  }
+  if (value === "starter" || value === "pro") {
+    return value;
+  }
+  return null;
+}
+
+function checkoutConfigErrorMessage(tier?: PaidPlan): string {
+  if (tier === "starter") {
+    return "Missing Stripe Starter price id configuration";
+  }
+  if (tier === "pro") {
+    return "Missing Stripe Pro price id configuration";
+  }
+  return "Missing Stripe paid price id configuration";
+}
+
 function resolveCheckoutPriceCandidates(
   env: AppEnv["Bindings"],
+  requestedTier: PaidPlan | undefined,
   requestedPriceId: string | undefined
 ): string[] {
-  const candidates = [
-    requestedPriceId,
-    env.STRIPE_PRICE_ID_PRO,
-    env.STRIPE_PRICE_PRO,
-    env.STRIPE_PRICE_STARTER
-  ].filter((value): value is string => Boolean(value && value.trim().length > 0));
+  if (requestedPriceId && requestedPriceId.trim().length > 0) {
+    return [requestedPriceId.trim()];
+  }
+
+  const baseCandidates =
+    requestedTier === "starter"
+      ? [resolveStarterPriceId(env)]
+      : requestedTier === "pro"
+        ? [resolveProPriceId(env)]
+        : [resolveProPriceId(env), resolveStarterPriceId(env)];
+
+  const candidates = baseCandidates.filter((value): value is string => Boolean(value && value.trim().length > 0));
 
   return [...new Set(candidates)];
+}
+
+function matchesConfiguredStripeTarget(
+  configuredId: string | null | undefined,
+  actualPriceId: string | null | undefined,
+  actualProductId: string | null | undefined
+): boolean {
+  if (!configuredId) {
+    return false;
+  }
+  if (configuredId.startsWith("price_")) {
+    return Boolean(actualPriceId && configuredId === actualPriceId);
+  }
+  if (configuredId.startsWith("prod_")) {
+    return Boolean(actualProductId && configuredId === actualProductId);
+  }
+  return false;
+}
+
+async function resolvePlanFromPrice(
+  c: import("hono").Context<AppEnv>,
+  options: {
+    hintedTier?: string | null;
+    priceId?: string | null;
+    productId?: string | null;
+  }
+): Promise<PaidPlan> {
+  const hintedPlan = parsePaidPlan(options.hintedTier);
+  if (hintedPlan) {
+    return hintedPlan;
+  }
+
+  const starterConfigured = [c.env.STRIPE_PRICE_ID_STARTER, c.env.STRIPE_PRICE_STARTER].filter(
+    (value): value is string => Boolean(value && value.trim().length > 0)
+  );
+  const proConfigured = [c.env.STRIPE_PRICE_ID_PRO, c.env.STRIPE_PRICE_PRO].filter(
+    (value): value is string => Boolean(value && value.trim().length > 0)
+  );
+
+  if (starterConfigured.some((configured) => matchesConfiguredStripeTarget(configured, options.priceId, options.productId))) {
+    return "starter";
+  }
+  if (proConfigured.some((configured) => matchesConfiguredStripeTarget(configured, options.priceId, options.productId))) {
+    return "pro";
+  }
+
+  if (options.priceId) {
+    for (const configured of starterConfigured) {
+      try {
+        const resolved = await resolveCheckoutPriceId(c.env.STRIPE_SECRET_KEY, configured);
+        if (resolved === options.priceId) {
+          return "starter";
+        }
+      } catch (error) {
+        console.error("Unable to resolve Stripe starter price config", { configured, error });
+      }
+    }
+
+    for (const configured of proConfigured) {
+      try {
+        const resolved = await resolveCheckoutPriceId(c.env.STRIPE_SECRET_KEY, configured);
+        if (resolved === options.priceId) {
+          return "pro";
+        }
+      } catch (error) {
+        console.error("Unable to resolve Stripe pro price config", { configured, error });
+      }
+    }
+  }
+
+  return "pro";
 }
 
 async function findUserIdForEvent(
@@ -61,7 +170,7 @@ async function findUserIdForEvent(
   return null;
 }
 
-async function setUserPlan(c: import("hono").Context<AppEnv>, userId: string, targetPlan: "free" | "pro"): Promise<void> {
+async function setUserPlan(c: import("hono").Context<AppEnv>, userId: string, targetPlan: UserPlan): Promise<void> {
   const user = await getUserById(c.env.DB, userId);
   if (!user) {
     return;
@@ -150,6 +259,10 @@ async function handleCheckoutCompleted(c: import("hono").Context<AppEnv>, event:
   const subscriptionId = session.subscription;
   const customerId = session.customer;
   const priceId = session.metadata?.price_id ?? resolveProPriceId(c.env);
+  const tier = await resolvePlanFromPrice(c, {
+    hintedTier: session.metadata?.plan_tier,
+    priceId
+  });
 
   if (subscriptionId && customerId) {
     await upsertSubscription(c, {
@@ -162,7 +275,7 @@ async function handleCheckoutCompleted(c: import("hono").Context<AppEnv>, event:
     });
   }
 
-  await setUserPlan(c, userId, "pro");
+  await setUserPlan(c, userId, tier);
 }
 
 async function handleSubscriptionUpdated(
@@ -180,6 +293,7 @@ async function handleSubscriptionUpdated(
       data?: Array<{
         price?: {
           id?: string;
+          product?: string | { id?: string };
         };
       }>;
     };
@@ -195,7 +309,14 @@ async function handleSubscriptionUpdated(
     return;
   }
 
-  const priceId = subscription.items?.data?.[0]?.price?.id ?? resolveProPriceId(c.env) ?? "unknown";
+  const price = subscription.items?.data?.[0]?.price;
+  const priceId = price?.id ?? resolveProPriceId(c.env) ?? "unknown";
+  const productId =
+    typeof price?.product === "string"
+      ? price.product
+      : typeof price?.product === "object" && price.product
+        ? price.product.id ?? null
+        : null;
   const currentPeriodEnd = subscription.current_period_end ? new Date(subscription.current_period_end * 1000).toISOString() : null;
 
   await upsertSubscription(c, {
@@ -207,8 +328,13 @@ async function handleSubscriptionUpdated(
     currentPeriodEnd
   });
 
-  const shouldBePro = !forceFree && ACTIVE_STATUSES.has(subscription.status);
-  await setUserPlan(c, userId, shouldBePro ? "pro" : "free");
+  const shouldBePaid = !forceFree && ACTIVE_STATUSES.has(subscription.status);
+  const paidPlan = await resolvePlanFromPrice(c, {
+    hintedTier: subscription.metadata?.plan_tier,
+    priceId,
+    productId
+  });
+  await setUserPlan(c, userId, shouldBePaid ? paidPlan : "free");
 }
 
 export function registerStripeRoutes(app: Hono<AppEnv>) {
@@ -224,9 +350,10 @@ export function registerStripeRoutes(app: Hono<AppEnv>) {
       return c.json({ error: "Invalid checkout request" }, 400);
     }
 
-    const checkoutCandidates = resolveCheckoutPriceCandidates(c.env, parsed.data.priceId);
+    const requestedTier = parsed.data.tier;
+    const checkoutCandidates = resolveCheckoutPriceCandidates(c.env, requestedTier, parsed.data.priceId);
     if (checkoutCandidates.length === 0) {
-      return c.json({ error: "Missing Stripe Pro price id configuration" }, 500);
+      return c.json({ error: checkoutConfigErrorMessage(requestedTier) }, 500);
     }
     const appUrl = c.env.APP_URL.endsWith("/") ? c.env.APP_URL.slice(0, -1) : c.env.APP_URL;
 
@@ -239,7 +366,8 @@ export function registerStripeRoutes(app: Hono<AppEnv>) {
           successUrl: `${appUrl}/app/settings?success=1`,
           cancelUrl: `${appUrl}/app/settings?canceled=1`,
           userId: auth.id,
-          email: auth.email
+          email: auth.email,
+          planTier: requestedTier
         });
 
         return c.json({ checkoutUrl: session.url, id: session.id });

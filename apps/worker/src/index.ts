@@ -81,7 +81,7 @@ app.use("/api/*", async (c, next) => {
   if (isFreeExpired(authUser) && !FREE_EXEMPT_ROUTES.has(c.req.path) && !isAllowedReadOnly) {
     return c.json(
       {
-        error: "Free plan access expired after 50 days. Upgrade to Pro to continue using Tradevera."
+        error: "Free plan access expired after 50 days. Upgrade to Starter or Pro to continue using Tradevera."
       },
       402
     );

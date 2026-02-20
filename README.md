@@ -3,10 +3,10 @@
 Tradevera is a production-ready trading journal SaaS MVP with:
 - Magic-link auth + direct email/password login
 - Cloud sync on Cloudflare Worker + D1
-- Stripe Pro subscriptions + webhook unlock logic
+- Stripe Starter/Pro subscriptions + webhook unlock logic
 - Resend transactional email (magic-link + Pro welcome)
 - Free plan limits: 50 trades and 50 days
-- Pro analytics, weekly review, PDF export, no ads
+- Starter/Pro paid tiers with no ads (Pro adds AI + advanced analytics)
 - Projects + tasks workspace for execution planning (all plans)
 - Trade screenshot attachments per trade
 - Risk guardrails with lockout cooldowns
@@ -33,8 +33,9 @@ If your goal is "ready for sales tonight", do these in order:
   - `STRIPE_SECRET_KEY` (live)
   - `STRIPE_WEBHOOK_SECRET`
   - `STRIPE_PRICE_ID_PRO`
+  - `STRIPE_PRICE_ID_STARTER` (recommended) or `STRIPE_PRICE_STARTER`
   - `STRIPE_PRICE_PRO` (legacy alias supported)
-  - `STRIPE_PRICE_STARTER` (optional fallback if Pro price is unavailable)
+  - `STRIPE_PRICE_STARTER` (legacy alias supported)
   - `RESEND_API_KEY`
   - `RESEND_FROM`
   - `SUPPORT_EMAIL`
@@ -48,7 +49,7 @@ If your goal is "ready for sales tonight", do these in order:
 - `RESEND_FROM` must be a verified domain sender (not Gmail).
 - If this is not set correctly, `/auth/request-link` returns `502` and login emails fail.
 
-4. Stripe webhook (required for automatic Pro unlock/downgrade)
+4. Stripe webhook (required for automatic Starter/Pro unlock and downgrade)
 - Endpoint:
   - `https://tradevera-worker.tradevera.workers.dev/api/stripe/webhook`
 - Events:
@@ -109,7 +110,7 @@ tradevera/
   - `customer.subscription.created`
   - `customer.subscription.updated`
   - `customer.subscription.deleted`
-- Updates `subscriptions` table and user plan (`free`/`pro`)
+- Updates `subscriptions` table and user plan (`free`/`starter`/`pro`)
 - Sends “Welcome to Tradevera Pro” on first activation
 - Optional `LIFETIME_PRO_EMAILS` prevents creator/admin emails from being downgraded
 
@@ -127,7 +128,7 @@ tradevera/
 - Task statuses: `todo`, `in_progress`, `done`
 - Priority levels: `low`, `medium`, `high`, `critical`
 - Task board with filters, templates, due-date handling, and progress views
-- Available on Free and Pro (subject to Free 50-day window)
+- Available on Free, Starter, and Pro (subject to Free 50-day window)
 
 ### Risk Guardrails
 - `/api/risk-settings` lets users configure daily max loss, max consecutive losses, and cooldown duration
@@ -201,8 +202,9 @@ JWT_SECRET=<random long secret>
 STRIPE_SECRET_KEY=<stripe sk_...>
 STRIPE_WEBHOOK_SECRET=<whsec_...>
 STRIPE_PRICE_ID_PRO=<price_...>
+STRIPE_PRICE_ID_STARTER=<price_...>
 STRIPE_PRICE_PRO=<optional legacy alias>
-STRIPE_PRICE_STARTER=<optional fallback paid price>
+STRIPE_PRICE_STARTER=<optional legacy alias>
 RESEND_API_KEY=<re_...>
 RESEND_FROM=Tradevera <no-reply@yourdomain.com>
 APP_URL=https://<your-render-domain>
@@ -210,7 +212,7 @@ SUPPORT_EMAIL=support@yourdomain.com
 LIFETIME_PRO_EMAILS=owner@yourdomain.com,cofounder@yourdomain.com
 ```
 
-`STRIPE_PRICE_ID_PRO` / `STRIPE_PRICE_PRO` / `STRIPE_PRICE_STARTER` can be either `price_...` or `prod_...`.
+`STRIPE_PRICE_ID_PRO` / `STRIPE_PRICE_ID_STARTER` / `STRIPE_PRICE_PRO` / `STRIPE_PRICE_STARTER` can be either `price_...` or `prod_...`.
 If a product ID is provided, the Worker auto-resolves its default/active price for Checkout.
 
 Use:
@@ -294,6 +296,7 @@ wrangler secret put JWT_SECRET
 wrangler secret put STRIPE_SECRET_KEY
 wrangler secret put STRIPE_WEBHOOK_SECRET
 wrangler secret put STRIPE_PRICE_ID_PRO
+wrangler secret put STRIPE_PRICE_ID_STARTER
 wrangler secret put RESEND_API_KEY
 wrangler secret put RESEND_FROM
 wrangler secret put SUPPORT_EMAIL
@@ -329,7 +332,7 @@ https://<your-worker-domain>/api/stripe/webhook
 
 3. Copy webhook signing secret (`whsec_...`) to `STRIPE_WEBHOOK_SECRET`.
 
-4. Ensure `STRIPE_PRICE_ID_PRO` points to your existing Pro price.
+4. Ensure `STRIPE_PRICE_ID_PRO` and `STRIPE_PRICE_ID_STARTER` point to your live prices.
 
 ## 3) Resend
 
@@ -411,8 +414,8 @@ VITE_ADSENSE_SLOT_TRADES=<slot-id>
 1. Magic link login persists via HttpOnly cookie.
 2. Free user can create 50 trades; 51st returns `402` with upgrade message.
 3. Free user beyond 50 days from signup receives `402` for restricted API usage until upgrade.
-4. Pro user can create unlimited trades.
-5. Stripe webhook upgrades/downgrades user plan.
+4. Starter and Pro users can create trades without Free 50-trade/50-day caps.
+5. Stripe webhook upgrades/downgrades user plan and preserves Starter vs Pro.
 6. First Pro activation sends welcome email and writes subscription row.
 7. `/api/me` returns plan + trade usage + Free day window accurately.
 8. UI reflects plan and gates Pro features.
