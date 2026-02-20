@@ -174,14 +174,14 @@ export function LoginPage() {
     setPasswordLoading(true);
     try {
       const loginResult = await api.loginWithPassword(normalizedEmail, password);
+      const provisionalUser = buildProvisionalUser(loginResult.sessionToken, normalizedEmail);
+      if (provisionalUser) {
+        setAuthUser(provisionalUser);
+      }
+
       const me = await verifySessionWithRetry(loginResult.sessionToken);
       if (me?.user?.id) {
         setAuthUser(me.user);
-      } else {
-        const provisionalUser = buildProvisionalUser(loginResult.sessionToken, normalizedEmail);
-        if (provisionalUser) {
-          setAuthUser(provisionalUser);
-        }
       }
       // Keep profile data fresh in the background without blocking navigation.
       void refreshMe();

@@ -78,14 +78,14 @@ export function AuthCallbackPage() {
     setTemporaryPassword(null);
     try {
       const consumeResult = await api.consumeMagicLink(token);
+      const provisionalUser = buildProvisionalUser(consumeResult.sessionToken);
+      if (provisionalUser) {
+        setAuthUser(provisionalUser);
+      }
+
       const me = await verifySessionWithRetry(consumeResult.sessionToken);
       if (me?.user?.id) {
         setAuthUser(me.user);
-      } else {
-        const provisionalUser = buildProvisionalUser(consumeResult.sessionToken);
-        if (provisionalUser) {
-          setAuthUser(provisionalUser);
-        }
       }
       // Keep profile data fresh in the background without blocking navigation.
       void refreshMe();

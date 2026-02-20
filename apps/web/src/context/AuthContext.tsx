@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { UserMe } from "@tradevera/shared";
 import { ApiError, api } from "@/lib/api";
 
@@ -62,6 +62,7 @@ function writeCachedUser(nextUser: UserMe | null) {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<UserMe | null>(() => readCachedUser());
   const [loading, setLoading] = useState<boolean>(() => readCachedUser() === null);
+  const refreshVersionRef = useRef(0);
 
   const setAuthUser = useCallback((nextUser: UserMe | null) => {
     setUser(nextUser);
@@ -69,13 +70,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const refreshMe = useCallback(async () => {
+    const refreshVersion = ++refreshVersionRef.current;
+    const isLatestRefresh = () => refreshVersion === refreshVersionRef.current;
+
     const attempts = 2;
     for (let index = 0; index < attempts; index += 1) {
       try {
         const response = await api.me();
+        if (!isLatestRefresh()) {
+          return;
+        }
         setAuthUser(response.user);
         return;
       } catch (error) {
+        if (!isLatestRefresh()) {
+          return;
+        }
+
         if (error instanceof ApiError && error.status === 401) {
           setAuthUser(null);
           return;
@@ -92,6 +103,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [setAuthUser]);
 
   const logout = useCallback(async () => {
+    refreshVersionRef.current += 1;
     await api.logout();
     setAuthUser(null);
   }, [setAuthUser]);
