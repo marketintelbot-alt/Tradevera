@@ -1,11 +1,25 @@
-import { authConsumeSchema, authRequestLinkSchema } from "@tradevera/shared";
+import {
+  authConsumeSchema,
+  authPasswordLoginSchema,
+  authRequestLinkSchema,
+  authRequestPasswordSchema
+} from "@tradevera/shared";
 import type { Context } from "hono";
 import type { AppEnv, AuthUser } from "./types";
-import { createUser, getUserByEmail, getUserById, incrementUserSessionVersion } from "./utils/db";
-import { sendMagicLinkEmail } from "./utils/email";
+import { createUser, getUserByEmail, getUserById, incrementUserSessionVersion, type UserRow } from "./utils/db";
+import { sendMagicLinkEmail, sendPasswordCredentialsEmail } from "./utils/email";
 import { clearSessionCookie, createSessionCookie, parseCookie, signJwt, verifyJwt } from "./utils/jwt";
 import { isLifetimeProEmail } from "./utils/lifetime";
-import { addMinutesIso, isTruthyEnv, nowIso, randomToken, sha256Hex } from "./utils/security";
+import {
+  addMinutesIso,
+  generateReadablePassword,
+  hashPassword,
+  isTruthyEnv,
+  nowIso,
+  randomToken,
+  sha256Hex,
+  verifyPassword
+} from "./utils/security";
 
 interface LoginTokenRow {
   token_hash: string;
@@ -52,6 +66,151 @@ function sessionSameSite(requestUrl: string, requestOrigin: string | undefined):
   }
 }
 
+function shouldAllowDebugResponse(c: Context<AppEnv>): boolean {
+  const requestHost = new URL(c.req.url).hostname;
+  return isTruthyEnv(c.env.ALLOW_MAGIC_LINK_IN_RESPONSE) || requestHost === "localhost" || requestHost === "127.0.0.1";
+}
+
+async function ensureLifetimePro(c: Context<AppEnv>, user: UserRow): Promise<UserRow> {
+  if (!isLifetimeProEmail(c.env, user.email) || user.plan === "pro") {
+    return user;
+  }
+
+  await c.env.DB.prepare("UPDATE users SET plan = 'pro' WHERE id = ?").bind(user.id).run();
+  return {
+    ...user,
+    plan: "pro"
+  };
+}
+
+async function setSessionCookie(c: Context<AppEnv>, user: UserRow): Promise<void> {
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  const sessionToken = await signJwt(
+    {
+      sub: user.id,
+      email: user.email,
+      session_version: user.session_version,
+      iat: nowSeconds,
+      exp: nowSeconds + SESSION_MAX_AGE_SECONDS
+    },
+    c.env.JWT_SECRET
+  );
+
+  const secure = shouldUseSecureCookie(c.req.url);
+  const sameSite = sessionSameSite(c.req.url, c.req.header("Origin"));
+  c.header(
+    "Set-Cookie",
+    createSessionCookie(SESSION_COOKIE_NAME, sessionToken, {
+      secure,
+      sameSite,
+      maxAgeSeconds: SESSION_MAX_AGE_SECONDS
+    })
+  );
+}
+
+interface ProvisionPasswordResult {
+  passwordProvisioned: boolean;
+  passwordDelivery: "email" | "debug" | null;
+  temporaryPassword?: string;
+}
+
+async function provisionPasswordForUser(c: Context<AppEnv>, user: UserRow): Promise<ProvisionPasswordResult> {
+  if (user.password_hash) {
+    return { passwordProvisioned: false, passwordDelivery: null };
+  }
+
+  const temporaryPassword = generateReadablePassword(14);
+  const passwordHash = await hashPassword(temporaryPassword);
+  const passwordUpdatedAt = nowIso();
+  const allowDebug = shouldAllowDebugResponse(c);
+
+  const setPasswordResult = await c.env.DB
+    .prepare("UPDATE users SET password_hash = ?, password_updated_at = ? WHERE id = ? AND password_hash IS NULL")
+    .bind(passwordHash, passwordUpdatedAt, user.id)
+    .run();
+
+  if (!setPasswordResult.success || Number(setPasswordResult.meta.changes ?? 0) < 1) {
+    return { passwordProvisioned: false, passwordDelivery: null };
+  }
+
+  try {
+    const delivery = await sendPasswordCredentialsEmail(c.env, user.email, temporaryPassword, { isReset: false });
+    console.info("password_credentials_email_sent", {
+      email: maskEmailForLogs(user.email),
+      requestId: delivery.id
+    });
+    return { passwordProvisioned: true, passwordDelivery: "email" };
+  } catch (error) {
+    console.error("Failed to send initial password email", error);
+
+    if (allowDebug) {
+      return {
+        passwordProvisioned: true,
+        passwordDelivery: "debug",
+        temporaryPassword
+      };
+    }
+
+    await c.env.DB
+      .prepare("UPDATE users SET password_hash = NULL, password_updated_at = NULL WHERE id = ? AND password_hash = ?")
+      .bind(user.id, passwordHash)
+      .run();
+
+    return {
+      passwordProvisioned: false,
+      passwordDelivery: null
+    };
+  }
+}
+
+async function resetPasswordForUser(
+  c: Context<AppEnv>,
+  user: UserRow
+): Promise<{ delivery: "email" | "debug"; temporaryPassword?: string } | null> {
+  const temporaryPassword = generateReadablePassword(14);
+  const passwordHash = await hashPassword(temporaryPassword);
+  const passwordUpdatedAt = nowIso();
+  const allowDebug = shouldAllowDebugResponse(c);
+
+  const existingHash = user.password_hash;
+  const existingUpdatedAt = user.password_updated_at;
+
+  await c.env.DB
+    .prepare("UPDATE users SET password_hash = ?, password_updated_at = ? WHERE id = ?")
+    .bind(passwordHash, passwordUpdatedAt, user.id)
+    .run();
+
+  try {
+    const delivery = await sendPasswordCredentialsEmail(c.env, user.email, temporaryPassword, { isReset: true });
+    console.info("password_reset_email_sent", {
+      email: maskEmailForLogs(user.email),
+      requestId: delivery.id
+    });
+    return { delivery: "email" };
+  } catch (error) {
+    console.error("Failed to send password reset email", error);
+
+    await c.env.DB
+      .prepare("UPDATE users SET password_hash = ?, password_updated_at = ? WHERE id = ?")
+      .bind(existingHash, existingUpdatedAt, user.id)
+      .run();
+
+    if (!allowDebug) {
+      return null;
+    }
+
+    await c.env.DB
+      .prepare("UPDATE users SET password_hash = ?, password_updated_at = ? WHERE id = ?")
+      .bind(passwordHash, passwordUpdatedAt, user.id)
+      .run();
+
+    return {
+      delivery: "debug",
+      temporaryPassword
+    };
+  }
+}
+
 function unauthorizedResponse(c: Context<AppEnv>) {
   return c.json({ error: "Unauthorized" }, 401);
 }
@@ -81,38 +240,15 @@ async function consumeMagicLinkToken(c: Context<AppEnv>, token: string) {
     user = await createUser(c.env.DB, tokenRow.user_email);
   }
 
-  if (isLifetimeProEmail(c.env, user.email) && user.plan !== "pro") {
-    await c.env.DB.prepare("UPDATE users SET plan = 'pro' WHERE id = ?").bind(user.id).run();
-    user = {
-      ...user,
-      plan: "pro"
-    };
-  }
+  user = await ensureLifetimePro(c, user);
+  const passwordResult = await provisionPasswordForUser(c, user);
+  await setSessionCookie(c, user);
 
-  const nowSeconds = Math.floor(Date.now() / 1000);
-  const sessionToken = await signJwt(
-    {
-      sub: user.id,
-      email: user.email,
-      session_version: user.session_version,
-      iat: nowSeconds,
-      exp: nowSeconds + SESSION_MAX_AGE_SECONDS
-    },
-    c.env.JWT_SECRET
-  );
-
-  const secure = shouldUseSecureCookie(c.req.url);
-  const sameSite = sessionSameSite(c.req.url, c.req.header("Origin"));
-  c.header(
-    "Set-Cookie",
-    createSessionCookie(SESSION_COOKIE_NAME, sessionToken, {
-      secure,
-      sameSite,
-      maxAgeSeconds: SESSION_MAX_AGE_SECONDS
-    })
-  );
-
-  return c.json({ success: true, redirectTo: "/app/dashboard" });
+  return c.json({
+    success: true,
+    redirectTo: "/app/dashboard",
+    ...passwordResult
+  });
 }
 
 export async function authenticateRequest(c: Context<AppEnv>): Promise<AuthUser | null> {
@@ -177,9 +313,7 @@ export function registerAuthRoutes(app: import("hono").Hono<AppEnv>) {
 
     const appUrl = c.env.APP_URL.endsWith("/") ? c.env.APP_URL.slice(0, -1) : c.env.APP_URL;
     const magicLink = `${appUrl}/auth/callback?token=${encodeURIComponent(rawToken)}`;
-    const requestHost = new URL(c.req.url).hostname;
-    const allowMagicLinkInResponse =
-      isTruthyEnv(c.env.ALLOW_MAGIC_LINK_IN_RESPONSE) || requestHost === "localhost" || requestHost === "127.0.0.1";
+    const allowMagicLinkInResponse = shouldAllowDebugResponse(c);
 
     let requestId: string | undefined;
     try {
@@ -213,6 +347,59 @@ export function registerAuthRoutes(app: import("hono").Hono<AppEnv>) {
     }
 
     return consumeMagicLinkToken(c, parsedBody.data.token);
+  });
+
+  app.post("/auth/login-password", async (c) => {
+    const parsedBody = authPasswordLoginSchema.safeParse(await c.req.json().catch(() => null));
+    if (!parsedBody.success) {
+      return c.json({ error: "Invalid email or password format" }, 400);
+    }
+
+    const { email, password } = parsedBody.data;
+    const existing = await getUserByEmail(c.env.DB, email);
+    if (!existing || !existing.password_hash) {
+      return c.json({ error: "Invalid login credentials" }, 401);
+    }
+
+    const validPassword = await verifyPassword(password, existing.password_hash);
+    if (!validPassword) {
+      return c.json({ error: "Invalid login credentials" }, 401);
+    }
+
+    const user = await ensureLifetimePro(c, existing);
+    await setSessionCookie(c, user);
+    return c.json({ success: true, redirectTo: "/app/dashboard" });
+  });
+
+  app.post("/auth/request-password", async (c) => {
+    const parsedBody = authRequestPasswordSchema.safeParse(await c.req.json().catch(() => null));
+    if (!parsedBody.success) {
+      return c.json({ error: "Invalid email address" }, 400);
+    }
+
+    const { email } = parsedBody.data;
+    const existing = await getUserByEmail(c.env.DB, email);
+    if (!existing) {
+      return c.json({
+        success: true,
+        message: "If an account exists for this email, password instructions have been sent."
+      });
+    }
+
+    const resetResult = await resetPasswordForUser(c, existing);
+    if (!resetResult) {
+      return c.json({ error: "Unable to send password email right now. Please try again shortly." }, 502);
+    }
+
+    return c.json({
+      success: true,
+      message:
+        resetResult.delivery === "debug"
+          ? "Email delivery failed in this environment; use the temporary password below."
+          : "Password email sent",
+      delivery: resetResult.delivery,
+      temporaryPassword: resetResult.temporaryPassword
+    });
   });
 
   app.get("/auth/consume", async (c) => {

@@ -57,6 +57,17 @@ export const authConsumeSchema = z.object({
   token: z.string().trim().min(1).max(512)
 });
 
+export const passwordSchema = z.string().min(8).max(128);
+
+export const authPasswordLoginSchema = z.object({
+  email: emailSchema,
+  password: passwordSchema
+});
+
+export const authRequestPasswordSchema = z.object({
+  email: emailSchema
+});
+
 export const tradeSchema = z.object({
   id: z.string().uuid().optional(),
   opened_at: z.string().datetime(),
@@ -185,6 +196,8 @@ export const riskTriggerReasonSchema = z.enum(RISK_TRIGGER_REASON_VALUES);
 
 export type AuthRequestLinkInput = z.infer<typeof authRequestLinkSchema>;
 export type AuthConsumeInput = z.infer<typeof authConsumeSchema>;
+export type AuthPasswordLoginInput = z.infer<typeof authPasswordLoginSchema>;
+export type AuthRequestPasswordInput = z.infer<typeof authRequestPasswordSchema>;
 export type TradeInput = z.infer<typeof tradeSchema>;
 export type TradeUpdateInput = z.infer<typeof tradeUpdateSchema>;
 export type CheckoutInput = z.infer<typeof checkoutSchema>;

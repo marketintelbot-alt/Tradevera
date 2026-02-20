@@ -1,7 +1,7 @@
 # Tradevera
 
 Tradevera is a production-ready trading journal SaaS MVP with:
-- Passwordless magic-link auth
+- Magic-link auth + direct email/password login
 - Cloud sync on Cloudflare Worker + D1
 - Stripe Pro subscriptions + webhook unlock logic
 - Resend transactional email (magic-link + Pro welcome)
@@ -93,7 +93,10 @@ tradevera/
 ### Auth
 - `POST /auth/request-link` creates hashed one-time token (15 min expiry), stores in D1, emails magic link
 - `POST /auth/consume` validates token, creates user if new, issues JWT in HttpOnly cookie (`tv_session`)
+- `POST /auth/login-password` signs in directly with email + password
+- `POST /auth/request-password` rotates and emails a new password
 - `/auth/callback?token=...` in the web app requires an explicit user click to finish sign-in (prevents link scanners from burning tokens)
+- On first successful magic-link sign-in, Tradevera provisions a password and emails credentials (`email` as username)
 - JWT includes `sub`, `email`, `iat`, `exp`, `session_version`
 - Logout increments `session_version` and clears cookie
 
@@ -154,6 +157,7 @@ Migrations are in:
 - `apps/worker/migrations/0001_init.sql`
 - `apps/worker/migrations/0002_projects_tasks.sql`
 - `apps/worker/migrations/0003_risk_and_screenshots.sql`
+- `apps/worker/migrations/0004_password_auth.sql`
 
 Tables:
 - `users`
@@ -374,6 +378,8 @@ VITE_ADSENSE_SLOT_TRADES=<slot-id>
 
 - `POST /auth/request-link`
 - `POST /auth/consume`
+- `POST /auth/login-password`
+- `POST /auth/request-password`
 - `GET /auth/consume` (returns `405` guidance; consume is POST-only)
 - `POST /api/logout`
 - `GET /api/me`

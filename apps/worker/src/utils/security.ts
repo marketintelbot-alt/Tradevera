@@ -28,6 +28,98 @@ export function randomToken(bytes = 32): string {
     .join("");
 }
 
+function bytesToBase64(bytes: Uint8Array): string {
+  let binary = "";
+  for (const byte of bytes) {
+    binary += String.fromCharCode(byte);
+  }
+  return btoa(binary);
+}
+
+function base64ToBytes(base64: string): Uint8Array {
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+  return bytes;
+}
+
+const PASSWORD_HASH_VERSION = "pbkdf2_sha256";
+const PASSWORD_ITERATIONS = 180_000;
+const PASSWORD_DERIVED_BITS = 256;
+const PASSWORD_SALT_BYTES = 16;
+
+async function derivePasswordBytes(password: string, salt: Uint8Array, iterations: number): Promise<Uint8Array> {
+  const normalizedSalt = new Uint8Array(salt);
+  const passwordKey = await crypto.subtle.importKey("raw", encoder.encode(password), { name: "PBKDF2" }, false, [
+    "deriveBits"
+  ]);
+  const bits = await crypto.subtle.deriveBits(
+    {
+      name: "PBKDF2",
+      hash: "SHA-256",
+      salt: normalizedSalt,
+      iterations
+    },
+    passwordKey,
+    PASSWORD_DERIVED_BITS
+  );
+  return new Uint8Array(bits);
+}
+
+export async function hashPassword(password: string): Promise<string> {
+  const salt = new Uint8Array(PASSWORD_SALT_BYTES);
+  crypto.getRandomValues(salt);
+  const digest = await derivePasswordBytes(password, salt, PASSWORD_ITERATIONS);
+  return [PASSWORD_HASH_VERSION, String(PASSWORD_ITERATIONS), bytesToBase64(salt), bytesToBase64(digest)].join("$");
+}
+
+export async function verifyPassword(password: string, encodedHash: string): Promise<boolean> {
+  const [version, iterationsRaw, saltBase64, digestBase64] = encodedHash.split("$");
+  if (!version || !iterationsRaw || !saltBase64 || !digestBase64 || version !== PASSWORD_HASH_VERSION) {
+    return false;
+  }
+
+  const iterations = Number(iterationsRaw);
+  if (!Number.isFinite(iterations) || iterations < 1) {
+    return false;
+  }
+
+  let salt: Uint8Array;
+  let expectedDigest: Uint8Array;
+
+  try {
+    salt = base64ToBytes(saltBase64);
+    expectedDigest = base64ToBytes(digestBase64);
+  } catch {
+    return false;
+  }
+
+  const actualDigest = await derivePasswordBytes(password, salt, iterations);
+  if (expectedDigest.length !== actualDigest.length) {
+    return false;
+  }
+
+  let mismatch = 0;
+  for (let index = 0; index < expectedDigest.length; index += 1) {
+    mismatch |= expectedDigest[index] ^ actualDigest[index];
+  }
+
+  return mismatch === 0;
+}
+
+export function generateReadablePassword(length = 14): string {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@$%*#";
+  const bytes = new Uint8Array(length);
+  crypto.getRandomValues(bytes);
+  let output = "";
+  for (const byte of bytes) {
+    output += chars[byte % chars.length];
+  }
+  return output;
+}
+
 export function timingSafeEqual(a: string, b: string): boolean {
   if (a.length !== b.length) {
     return false;

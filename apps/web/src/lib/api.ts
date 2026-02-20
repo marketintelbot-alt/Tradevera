@@ -87,10 +87,32 @@ export const api = {
     });
   },
 
-  async consumeMagicLink(token: string): Promise<{ success: boolean; redirectTo?: string }> {
+  async consumeMagicLink(token: string): Promise<{
+    success: boolean;
+    redirectTo?: string;
+    passwordProvisioned?: boolean;
+    passwordDelivery?: "email" | "debug" | null;
+    temporaryPassword?: string;
+  }> {
     return request("/auth/consume", {
       method: "POST",
       body: JSON.stringify({ token })
+    });
+  },
+
+  async loginWithPassword(email: string, password: string): Promise<{ success: boolean; redirectTo?: string }> {
+    return request("/auth/login-password", {
+      method: "POST",
+      body: JSON.stringify({ email, password })
+    });
+  },
+
+  async requestPassword(
+    email: string
+  ): Promise<{ success: boolean; message: string; delivery?: "email" | "debug"; temporaryPassword?: string }> {
+    return request("/auth/request-password", {
+      method: "POST",
+      body: JSON.stringify({ email })
     });
   },
 

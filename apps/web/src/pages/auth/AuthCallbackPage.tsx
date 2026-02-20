@@ -10,6 +10,7 @@ export function AuthCallbackPage() {
   const [searchParams] = useSearchParams();
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<"idle" | "loading">("idle");
+  const [temporaryPassword, setTemporaryPassword] = useState<string | null>(null);
   const navigate = useNavigate();
   const { refreshMe } = useAuth();
   const token = useMemo(() => searchParams.get("token"), [searchParams]);
@@ -23,13 +24,18 @@ export function AuthCallbackPage() {
 
     setError(null);
     setStatus("loading");
+    setTemporaryPassword(null);
     try {
-      await api.consumeMagicLink(token);
+      const consumeResult = await api.consumeMagicLink(token);
       const me = await api.me();
       if (!me?.user?.id) {
         throw new Error("Session was not established. Request a new login link.");
       }
       await refreshMe();
+      if (consumeResult.temporaryPassword) {
+        setTemporaryPassword(consumeResult.temporaryPassword);
+        return;
+      }
       navigate("/app/dashboard", { replace: true });
     } catch (err) {
       const message =
@@ -53,7 +59,16 @@ export function AuthCallbackPage() {
         <p className="mt-2 text-sm text-ink-700">
           Click below to finish your secure login. This prevents automated link scanners from burning your token.
         </p>
-        {error ? (
+        {temporaryPassword && !error ? (
+          <div className="mt-4 rounded-lg border border-amber-500/35 bg-amber-100 px-3 py-3 text-sm text-ink-900">
+            <p className="font-semibold">Save this temporary password</p>
+            <p className="mt-1 text-xs text-ink-800">Email delivery failed in this environment. Use this password for direct login.</p>
+            <p className="mt-2 rounded-md bg-white px-2 py-1 font-semibold">{temporaryPassword}</p>
+            <Button type="button" className="mt-3 w-full" onClick={() => navigate("/app/dashboard", { replace: true })}>
+              Continue to dashboard
+            </Button>
+          </div>
+        ) : error ? (
           <>
             <p className="mt-2 text-sm text-coral-500">{error}</p>
             <div className="mt-4 flex gap-2">

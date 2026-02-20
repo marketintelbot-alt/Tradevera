@@ -6,6 +6,8 @@ export interface UserRow {
   plan: "free" | "pro";
   created_at: string;
   session_version: number;
+  password_hash: string | null;
+  password_updated_at: string | null;
   pro_welcome_sent_at: string | null;
 }
 
@@ -75,7 +77,12 @@ export async function createUser(db: D1Database, email: string): Promise<UserRow
   const id = crypto.randomUUID();
   const createdAt = nowIso();
   await db
-    .prepare("INSERT INTO users (id, email, plan, created_at, session_version, pro_welcome_sent_at) VALUES (?, ?, 'free', ?, 1, NULL)")
+    .prepare(
+      [
+        "INSERT INTO users (id, email, plan, created_at, session_version, password_hash, password_updated_at, pro_welcome_sent_at)",
+        "VALUES (?, ?, 'free', ?, 1, NULL, NULL, NULL)"
+      ].join(" ")
+    )
     .bind(id, email, createdAt)
     .run();
 
@@ -85,6 +92,8 @@ export async function createUser(db: D1Database, email: string): Promise<UserRow
     plan: "free",
     created_at: createdAt,
     session_version: 1,
+    password_hash: null,
+    password_updated_at: null,
     pro_welcome_sent_at: null
   };
 }

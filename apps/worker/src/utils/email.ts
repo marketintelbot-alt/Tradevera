@@ -60,6 +60,62 @@ export async function sendMagicLinkEmail(env: Env, to: string, magicLink: string
   });
 }
 
+export async function sendPasswordCredentialsEmail(
+  env: Env,
+  to: string,
+  password: string,
+  options?: { isReset?: boolean }
+): Promise<ResendSendResponse> {
+  const supportEmail = env.SUPPORT_EMAIL ?? "support@tradevera.app";
+  const isReset = options?.isReset ?? false;
+  const subject = isReset ? "Your Tradevera password was reset" : "Your Tradevera password is ready";
+  const text = [
+    "Tradevera account login details",
+    "",
+    `Username: ${to}`,
+    `Password: ${password}`,
+    "",
+    `Login page: ${env.APP_URL}/login`,
+    "",
+    isReset
+      ? "If you requested this reset, you can sign in with the password above."
+      : "This password was generated after your first secure magic-link login.",
+    `Need help? ${supportEmail}`
+  ].join("\n");
+  const html = `
+    <div style="font-family:Arial, sans-serif; max-width:560px; margin:0 auto; padding:24px; color:#111827;">
+      <h2 style="margin:0 0 12px;">${isReset ? "Password reset complete" : "Your Tradevera password is ready"}</h2>
+      <p style="margin:0 0 12px; color:#374151;">
+        ${
+          isReset
+            ? "Use the credentials below to sign back in."
+            : "Use these credentials for fast login without requesting a magic link each time."
+        }
+      </p>
+      <div style="margin:0 0 14px; padding:14px; border:1px solid #e5e7eb; border-radius:10px; background:#f9fafb;">
+        <p style="margin:0 0 6px; font-size:13px; color:#6b7280;">Username</p>
+        <p style="margin:0 0 10px; font-weight:700;">${to}</p>
+        <p style="margin:0 0 6px; font-size:13px; color:#6b7280;">Password</p>
+        <p style="margin:0; font-weight:700;">${password}</p>
+      </div>
+      <a href="${env.APP_URL}/login" style="display:inline-block; padding:12px 18px; background:#0f172a; color:#ffffff; border-radius:8px; text-decoration:none; font-weight:600;">
+        Open Tradevera login
+      </a>
+      <p style="margin:16px 0 0; font-size:12px; color:#6b7280;">
+        Keep this email private. For support, contact ${supportEmail}.
+      </p>
+    </div>
+  `;
+
+  return sendResendEmail(env, {
+    from: env.RESEND_FROM,
+    to: [to],
+    subject,
+    html,
+    text
+  });
+}
+
 export async function sendProWelcomeEmail(env: Env, to: string): Promise<ResendSendResponse> {
   const supportEmail = env.SUPPORT_EMAIL ?? "support@tradevera.app";
   const subject = "Welcome to Tradevera Pro";

@@ -59,6 +59,11 @@ export function LandingPage() {
                   Start free <ArrowRight className="h-4 w-4" />
                 </Button>
               </Link>
+              <Link to="/login">
+                <Button size="lg" variant="secondary">
+                  Already have an account? Log in
+                </Button>
+              </Link>
               <span className="text-sm text-ink-700">No credit card required. Free includes cloud sync up to 50 trades for up to 50 days.</span>
             </div>
 
