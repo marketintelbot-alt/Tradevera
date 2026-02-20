@@ -106,8 +106,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<UserMe | null>(() => readCachedUser());
   const [loading, setLoading] = useState<boolean>(() => readCachedUser() === null);
   const refreshVersionRef = useRef(0);
+  const userRef = useRef<UserMe | null>(user);
+
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
 
   const setAuthUser = useCallback((nextUser: UserMe | null) => {
+    userRef.current = nextUser;
     setUser(nextUser);
     writeCachedUser(nextUser);
     if (nextUser) {
@@ -136,7 +142,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         if (error instanceof ApiError && error.status === 401) {
-          if (user && hasRecentAuthMarker()) {
+          if (userRef.current && hasRecentAuthMarker()) {
             // Avoid immediate bounce-to-login from transient auth propagation races.
             return;
           }
@@ -152,7 +158,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.error("Failed to fetch /api/me", error);
       }
     }
-  }, [setAuthUser, user]);
+  }, [setAuthUser]);
 
   const logout = useCallback(async () => {
     refreshVersionRef.current += 1;
