@@ -11,13 +11,15 @@ import {
   startOfWeek,
   subMonths
 } from "date-fns";
-import { CalendarDays, ChevronLeft, ChevronRight, Download, TrendingDown, TrendingUp } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, Download, Plus, Trash2, TrendingDown, TrendingUp } from "lucide-react";
 import type { Trade } from "@tradevera/shared";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Tabs } from "@/components/ui/Tabs";
+import { Input } from "@/components/ui/Input";
+import { useLocalStorageState } from "@/hooks/useLocalStorageState";
 import { useTrades } from "@/hooks/useTrades";
 import { formatCurrency, formatNumber } from "@/lib/utils";
 
@@ -34,6 +36,30 @@ interface DayBucket {
   sessionCounts: Record<SessionKey, number>;
 }
 
+type CalendarEventType = "fomc" | "cpi" | "earnings";
+type CalendarEventSource = "manual" | "detected";
+
+interface CalendarEvent {
+  id: string;
+  date: string;
+  type: CalendarEventType;
+  title: string;
+  symbol?: string | null;
+  source: CalendarEventSource;
+}
+
+interface EventToggleState {
+  fomc: boolean;
+  cpi: boolean;
+  earnings: boolean;
+}
+
+interface EventDraft {
+  type: CalendarEventType;
+  title: string;
+  symbol: string;
+}
+
 const WEEKDAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const VIEW_TABS = [
   { key: "month", label: "Month" },
@@ -47,6 +73,17 @@ const SESSION_META: Record<SessionKey, { dot: string; label: string }> = {
   NY: { dot: "bg-mint-500", label: "NY" },
   Other: { dot: "bg-ink-400", label: "Other" }
 };
+
+const CALENDAR_EVENTS_STORAGE_KEY = "tradevera_calendar_events_v1";
+const CALENDAR_EVENT_TOGGLES_STORAGE_KEY = "tradevera_calendar_event_toggles_v1";
+
+const EVENT_META: Record<CalendarEventType, { label: string; short: string; dot: string; badgeTone: "accent" | "warning" | "success" | "neutral" }> = {
+  fomc: { label: "FOMC", short: "F", dot: "bg-violet-500", badgeTone: "accent" },
+  cpi: { label: "CPI", short: "C", dot: "bg-amber-500", badgeTone: "warning" },
+  earnings: { label: "Earnings", short: "E", dot: "bg-sky-500", badgeTone: "success" }
+};
+
+const DEFAULT_EVENT_TOGGLES: EventToggleState = { fomc: true, cpi: true, earnings: true };
 
 function dayKey(date: Date): string {
   return format(date, "yyyy-MM-dd");
@@ -74,11 +111,34 @@ function csvEscape(value: string | number | null): string {
   return `"${escaped}"`;
 }
 
+function containsEarningsLanguage(trade: Trade): boolean {
+  const fields = [trade.notes, trade.setup, trade.mistakes].filter(Boolean).join(" ").toLowerCase();
+  return /(earn|er|earnings)/.test(fields);
+}
+
+function normalizeEarningsSymbol(trade: Trade): string | null {
+  const symbol = trade.symbol?.trim().toUpperCase();
+  if (!symbol) {
+    return null;
+  }
+  return symbol;
+}
+
 export function CalendarPage() {
   const { trades, loading } = useTrades();
   const [visibleMonth, setVisibleMonth] = useState<Date>(() => startOfMonth(new Date()));
   const [selectedDate, setSelectedDate] = useState<Date>(() => new Date());
   const [viewMode, setViewMode] = useState<ViewMode>("month");
+  const [manualEvents, setManualEvents] = useLocalStorageState<CalendarEvent[]>(CALENDAR_EVENTS_STORAGE_KEY, []);
+  const [eventToggles, setEventToggles] = useLocalStorageState<EventToggleState>(
+    CALENDAR_EVENT_TOGGLES_STORAGE_KEY,
+    DEFAULT_EVENT_TOGGLES
+  );
+  const [eventDraft, setEventDraft] = useState<EventDraft>({
+    type: "fomc",
+    title: "",
+    symbol: ""
+  });
 
   const weekStartDate = startOfWeek(selectedDate, { weekStartsOn: 1 });
   const weekEndDate = endOfWeek(selectedDate, { weekStartsOn: 1 });
@@ -149,6 +209,48 @@ export function CalendarPage() {
 
     return bucketMap;
   }, [trades]);
+
+  const detectedEarningsEvents = useMemo<CalendarEvent[]>(() => {
+    const byDateAndSymbol = new Map<string, CalendarEvent>();
+    for (const trade of trades) {
+      if (!containsEarningsLanguage(trade)) {
+        continue;
+      }
+      const symbol = normalizeEarningsSymbol(trade);
+      if (!symbol) {
+        continue;
+      }
+      const date = tradeDayKey(trade);
+      const key = `${date}:${symbol}`;
+      if (byDateAndSymbol.has(key)) {
+        continue;
+      }
+      byDateAndSymbol.set(key, {
+        id: `detected:${key}`,
+        date,
+        type: "earnings",
+        title: `${symbol} earnings`,
+        symbol,
+        source: "detected"
+      });
+    }
+    return Array.from(byDateAndSymbol.values()).sort((a, b) => a.date.localeCompare(b.date));
+  }, [trades]);
+
+  const allCalendarEvents = useMemo<CalendarEvent[]>(() => {
+    const merged = [...manualEvents, ...detectedEarningsEvents];
+    return merged
+      .filter((event) => eventToggles[event.type])
+      .sort((a, b) => a.date.localeCompare(b.date) || a.type.localeCompare(b.type));
+  }, [detectedEarningsEvents, eventToggles, manualEvents]);
+
+  const eventsByDay = useMemo(() => {
+    const map = new Map<string, CalendarEvent[]>();
+    for (const event of allCalendarEvents) {
+      map.set(event.date, [...(map.get(event.date) ?? []), event]);
+    }
+    return map;
+  }, [allCalendarEvents]);
 
   const monthStart = startOfMonth(visibleMonth);
   const monthEnd = endOfMonth(visibleMonth);
@@ -224,6 +326,59 @@ export function CalendarPage() {
 
   const selectedBucket = allDayBuckets.get(dayKey(selectedDate)) ?? null;
   const selectedTrades = selectedBucket?.trades ?? [];
+  const selectedDateKey = dayKey(selectedDate);
+  const selectedDayEvents = eventsByDay.get(selectedDateKey) ?? [];
+
+  const monthEvents = useMemo(() => allCalendarEvents.filter((event) => isSameMonth(new Date(`${event.date}T00:00:00`), visibleMonth)), [
+    allCalendarEvents,
+    visibleMonth
+  ]);
+
+  const monthEventCounts = useMemo(() => {
+    return monthEvents.reduce<Record<CalendarEventType, number>>(
+      (acc, event) => {
+        acc[event.type] += 1;
+        return acc;
+      },
+      { fomc: 0, cpi: 0, earnings: 0 }
+    );
+  }, [monthEvents]);
+
+  const addManualEvent = () => {
+    const type = eventDraft.type;
+    const title =
+      eventDraft.title.trim() ||
+      (type === "earnings"
+        ? `${eventDraft.symbol.trim().toUpperCase() || "Symbol"} earnings`
+        : `${EVENT_META[type].label} event`);
+
+    const normalizedSymbol = type === "earnings" ? eventDraft.symbol.trim().toUpperCase() || null : null;
+    if (type === "earnings" && !normalizedSymbol) {
+      return;
+    }
+
+    setManualEvents((current) => {
+      const nextEvent: CalendarEvent = {
+        id: `manual:${Date.now()}:${Math.random().toString(36).slice(2, 8)}`,
+        date: selectedDateKey,
+        type,
+        title,
+        symbol: normalizedSymbol,
+        source: "manual"
+      };
+      return [...current, nextEvent].sort((a, b) => a.date.localeCompare(b.date) || a.type.localeCompare(b.type));
+    });
+
+    setEventDraft((current) => ({
+      ...current,
+      title: "",
+      symbol: current.type === "earnings" ? "" : current.symbol
+    }));
+  };
+
+  const deleteManualEvent = (eventId: string) => {
+    setManualEvents((current) => current.filter((event) => event.id !== eventId));
+  };
 
   const exportMonthCsv = () => {
     const header = [
@@ -364,6 +519,27 @@ export function CalendarPage() {
             <p className="mt-2 text-2xl font-semibold">{formatCurrency(tradingDays ? monthPnl / tradingDays : 0)}</p>
           </Card>
         </div>
+
+        <div className="relative z-10 mt-4 flex flex-wrap items-center gap-2">
+          {(["fomc", "cpi", "earnings"] as CalendarEventType[]).map((type) => (
+            <button
+              key={type}
+              type="button"
+              onClick={() => setEventToggles((current) => ({ ...current, [type]: !current[type] }))}
+              className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+                eventToggles[type]
+                  ? "border-white/30 bg-white/15 text-white"
+                  : "border-white/15 bg-transparent text-ink-200 hover:bg-white/10"
+              }`}
+              title={`${eventToggles[type] ? "Hide" : "Show"} ${EVENT_META[type].label} overlays`}
+            >
+              <span className={`h-2.5 w-2.5 rounded-full ${EVENT_META[type].dot}`} />
+              {EVENT_META[type].label}
+              <span className="text-[11px] text-ink-200">{monthEventCounts[type]}</span>
+            </button>
+          ))}
+          <span className="text-xs text-ink-200">Add/edit macro and earnings events from the side panel.</span>
+        </div>
       </section>
 
       <div className="grid gap-6 xl:grid-cols-[1.45fr,0.95fr]">
@@ -393,6 +569,7 @@ export function CalendarPage() {
             {visibleDays.map((date) => {
               const key = dayKey(date);
               const bucket = allDayBuckets.get(key) ?? null;
+              const dayEvents = eventsByDay.get(key) ?? [];
               const pnl = bucket?.pnl ?? 0;
               const tradeCount = bucket?.trades.length ?? 0;
               const active = isSameDay(selectedDate, date);
@@ -456,6 +633,24 @@ export function CalendarPage() {
                       )}
                     </div>
                   )}
+                  {dayEvents.length > 0 && (
+                    <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                      {dayEvents.slice(0, 3).map((event) => (
+                        <span
+                          key={event.id}
+                          className={`inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-semibold text-white ${
+                            event.type === "fomc" ? "bg-violet-500" : event.type === "cpi" ? "bg-amber-500" : "bg-sky-500"
+                          }`}
+                          title={`${EVENT_META[event.type].label}: ${event.title}`}
+                        >
+                          {event.type === "earnings" && event.symbol ? event.symbol.slice(0, 3) : EVENT_META[event.type].short}
+                        </span>
+                      ))}
+                      {dayEvents.length > 3 && (
+                        <span className="text-[10px] font-semibold text-ink-700">+{dayEvents.length - 3}</span>
+                      )}
+                    </div>
+                  )}
                 </button>
               );
             })}
@@ -495,6 +690,20 @@ export function CalendarPage() {
                 </div>
 
                 <div className="space-y-2">
+                  {selectedDayEvents.length > 0 && (
+                    <div className="rounded-xl border border-ink-200 bg-ink-100/40 p-3">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-ink-700">Events on this day</p>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {selectedDayEvents.map((event) => (
+                          <Badge key={event.id} tone={EVENT_META[event.type].badgeTone} className="gap-1.5">
+                            <span className={`h-2 w-2 rounded-full ${EVENT_META[event.type].dot}`} />
+                            {event.title}
+                            {event.source === "manual" ? "" : " (detected)"}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   {selectedTrades.map((trade) => (
                     <article key={trade.id} className="rounded-lg border border-ink-200 p-3">
                       <div className="flex items-center justify-between">
@@ -518,6 +727,106 @@ export function CalendarPage() {
                 <p className="mt-2 text-sm text-ink-700">Pick another date in the calendar or add a trade to start tracking daily edge.</p>
               </div>
             )}
+          </Card>
+
+          <Card>
+            <CardHeader title="Event Overlays" subtitle="Track FOMC, CPI, and earnings catalysts directly on the PnL calendar." />
+
+            <div className="space-y-3">
+              <div className="grid gap-2 sm:grid-cols-3">
+                {(["fomc", "cpi", "earnings"] as CalendarEventType[]).map((type) => (
+                  <label
+                    key={type}
+                    className="inline-flex items-center justify-between gap-2 rounded-lg border border-ink-200 bg-white px-3 py-2 text-sm text-ink-900"
+                  >
+                    <span className="inline-flex items-center gap-2">
+                      <span className={`h-2.5 w-2.5 rounded-full ${EVENT_META[type].dot}`} />
+                      {EVENT_META[type].label}
+                    </span>
+                    <input
+                      type="checkbox"
+                      checked={eventToggles[type]}
+                      onChange={(event) => setEventToggles((current) => ({ ...current, [type]: event.target.checked }))}
+                    />
+                  </label>
+                ))}
+              </div>
+
+              <div className="rounded-xl border border-ink-200 bg-ink-100/35 p-3">
+                <p className="text-sm font-semibold text-ink-900">Add event to {format(selectedDate, "MMM d, yyyy")}</p>
+                <p className="mt-1 text-xs text-ink-700">
+                  Macro dates are user-editable by design. Earnings can also be auto-detected from trade notes/setup fields containing “earnings”.
+                </p>
+                <div className="mt-3 grid gap-3">
+                  <label className="flex flex-col gap-2">
+                    <span className="text-sm font-semibold text-ink-800">Event type</span>
+                    <select
+                      value={eventDraft.type}
+                      onChange={(event) =>
+                        setEventDraft((current) => ({
+                          ...current,
+                          type: event.target.value as CalendarEventType,
+                          symbol: event.target.value === "earnings" ? current.symbol : ""
+                        }))
+                      }
+                      className="h-11 rounded-lg border border-ink-200 bg-white px-3 text-sm text-ink-900"
+                    >
+                      <option value="fomc">FOMC</option>
+                      <option value="cpi">CPI</option>
+                      <option value="earnings">Earnings</option>
+                    </select>
+                  </label>
+
+                  {eventDraft.type === "earnings" && (
+                    <Input
+                      label="Symbol"
+                      value={eventDraft.symbol}
+                      onChange={(event) => setEventDraft((current) => ({ ...current, symbol: event.target.value.toUpperCase() }))}
+                      placeholder="NVDA"
+                    />
+                  )}
+
+                  <Input
+                    label="Title (optional)"
+                    value={eventDraft.title}
+                    onChange={(event) => setEventDraft((current) => ({ ...current, title: event.target.value }))}
+                    placeholder={eventDraft.type === "earnings" ? "NVDA earnings" : `${EVENT_META[eventDraft.type].label} event`}
+                  />
+
+                  <div className="flex flex-wrap gap-2">
+                    <Button size="sm" onClick={addManualEvent} className="gap-2">
+                      <Plus className="h-4 w-4" /> Add event
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-ink-700">Manual events this month</p>
+                <div className="mt-2 space-y-2">
+                  {manualEvents
+                    .filter((event) => isSameMonth(new Date(`${event.date}T00:00:00`), visibleMonth))
+                    .sort((a, b) => a.date.localeCompare(b.date) || a.title.localeCompare(b.title))
+                    .map((event) => (
+                      <div key={event.id} className="flex items-center justify-between gap-3 rounded-lg border border-ink-200 bg-white px-3 py-2">
+                        <div>
+                          <p className="text-sm font-semibold text-ink-900">{event.title}</p>
+                          <p className="text-xs text-ink-700">
+                            {format(new Date(`${event.date}T00:00:00`), "MMM d")} · {EVENT_META[event.type].label}
+                            {event.symbol ? ` · ${event.symbol}` : ""}
+                          </p>
+                        </div>
+                        <Button size="sm" variant="ghost" onClick={() => deleteManualEvent(event.id)} className="gap-2 text-coral-500">
+                          <Trash2 className="h-4 w-4" /> Remove
+                        </Button>
+                      </div>
+                    ))}
+                  {manualEvents.filter((event) => isSameMonth(new Date(`${event.date}T00:00:00`), visibleMonth)).length === 0 && (
+                    <p className="text-sm text-ink-700">No manual events added for this month yet.</p>
+                  )}
+                </div>
+              </div>
+            </div>
           </Card>
 
           <Card>

@@ -1,28 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import type { RiskSettingsResponse } from "@tradevera/shared";
-import { ShieldAlert, ShieldCheck } from "lucide-react";
+import { ArrowRight, Brain, ClipboardCheck, ShieldAlert, ShieldCheck, Target, Building2 } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
-import { Tabs } from "@/components/ui/Tabs";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/common/ToastProvider";
 import { api } from "@/lib/api";
 import { formatNumber } from "@/lib/utils";
-
-const checklistTemplates = {
-  pre: [
-    "Mark key levels and liquidity zones",
-    "Define setup trigger and invalidation",
-    "Set risk per trade and daily max loss",
-    "Check news/events for volatility spikes"
-  ],
-  post: [
-    "Capture screenshot and annotate context",
-    "Log emotions and decision quality",
-    "Tag mistakes and best behaviors",
-    "Write one improvement for tomorrow"
-  ]
-};
 
 export function ToolsPage() {
   const { toast } = useToast();
@@ -35,8 +20,6 @@ export function ToolsPage() {
   const [rStop, setRStop] = useState("99");
   const [rExit, setRExit] = useState("102");
 
-  const [tab, setTab] = useState<"pre" | "post">("pre");
-  const [checked, setChecked] = useState<Record<string, boolean>>({});
   const [riskLoading, setRiskLoading] = useState(true);
   const [riskSaving, setRiskSaving] = useState(false);
   const [riskEnabled, setRiskEnabled] = useState(true);
@@ -183,27 +166,60 @@ export function ToolsPage() {
       </div>
 
       <Card>
-        <CardHeader title="Checklist Templates" subtitle="Repeatable process guardrails for consistency." />
-        <Tabs
-          tabs={[
-            { key: "pre", label: "Pre-market" },
-            { key: "post", label: "Post-market" }
-          ]}
-          activeKey={tab}
-          onChange={(key) => setTab(key as "pre" | "post")}
-        />
+        <CardHeader title="Journal OS Workflows" subtitle="Checklist templates have moved into Prep. Use these dedicated modules instead." />
+        <div className="grid gap-3 md:grid-cols-2">
+          <Link to="/app/prep" className="group rounded-xl border border-ink-200 bg-white p-4 transition hover:border-ink-300 hover:shadow-soft">
+            <p className="inline-flex items-center gap-2 text-sm font-semibold text-ink-900">
+              <ClipboardCheck className="h-4 w-4" />
+              Prep Workspace
+            </p>
+            <p className="mt-2 text-sm text-ink-700">Pre-market planning, key levels, bias, if/then scenarios, and post-market review in one page.</p>
+            <p className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-ink-900">
+              Open Prep <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" />
+            </p>
+          </Link>
 
-        <div className="mt-4 grid gap-2">
-          {checklistTemplates[tab].map((item) => (
-            <label key={item} className="inline-flex items-center gap-3 rounded-lg border border-ink-200 bg-white px-3 py-2 text-sm text-ink-900">
-              <input
-                type="checkbox"
-                checked={Boolean(checked[item])}
-                onChange={(event) => setChecked((current) => ({ ...current, [item]: event.target.checked }))}
-              />
-              {item}
-            </label>
-          ))}
+          <Link
+            to="/app/psychology"
+            className="group rounded-xl border border-ink-200 bg-white p-4 transition hover:border-ink-300 hover:shadow-soft"
+          >
+            <p className="inline-flex items-center gap-2 text-sm font-semibold text-ink-900">
+              <Brain className="h-4 w-4" />
+              Psychology Tracker
+            </p>
+            <p className="mt-2 text-sm text-ink-700">Track emotions, tilt triggers, discipline score, and recovery protocol to improve execution behavior.</p>
+            <p className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-ink-900">
+              Open Psychology <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" />
+            </p>
+          </Link>
+
+          <Link
+            to="/app/accountability"
+            className="group rounded-xl border border-ink-200 bg-white p-4 transition hover:border-ink-300 hover:shadow-soft"
+          >
+            <p className="inline-flex items-center gap-2 text-sm font-semibold text-ink-900">
+              <Target className="h-4 w-4" />
+              Accountability
+            </p>
+            <p className="mt-2 text-sm text-ink-700">Daily scorecards, weekly commitments, and process follow-through tied to your projects/tasks workspace.</p>
+            <p className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-ink-900">
+              Open Accountability <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" />
+            </p>
+          </Link>
+
+          <Link
+            to="/app/prop-firms"
+            className="group rounded-xl border border-ink-200 bg-white p-4 transition hover:border-ink-300 hover:shadow-soft"
+          >
+            <p className="inline-flex items-center gap-2 text-sm font-semibold text-ink-900">
+              <Building2 className="h-4 w-4" />
+              Prop Firm Accounts
+            </p>
+            <p className="mt-2 text-sm text-ink-700">Track multiple eval/funded accounts, edit rules, and pair copy-trading groups with separate limits.</p>
+            <p className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-ink-900">
+              Open Prop Firms <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" />
+            </p>
+          </Link>
         </div>
       </Card>
 

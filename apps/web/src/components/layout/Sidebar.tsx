@@ -1,12 +1,30 @@
-import { BarChart3, Bot, CalendarDays, ClipboardList, FolderKanban, Gauge, Settings, Sparkles, Wrench } from "lucide-react";
+import {
+  BarChart3,
+  Bot,
+  Brain,
+  Building2,
+  CalendarDays,
+  ClipboardCheck,
+  ClipboardList,
+  FolderKanban,
+  Gauge,
+  Settings,
+  Sparkles,
+  Target,
+  Wrench
+} from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { to: "/app/dashboard", label: "Dashboard", icon: Gauge },
   { to: "/app/calendar", label: "Calendar", icon: CalendarDays },
+  { to: "/app/prep", label: "Prep", icon: ClipboardCheck },
+  { to: "/app/psychology", label: "Psychology", icon: Brain },
+  { to: "/app/accountability", label: "Accountability", icon: Target },
   { to: "/app/assistant", label: "AI Assistant", icon: Bot },
   { to: "/app/projects", label: "Projects", icon: FolderKanban },
+  { to: "/app/prop-firms", label: "Prop Firms", icon: Building2 },
   { to: "/app/trades", label: "Trades", icon: ClipboardList },
   { to: "/app/trades/new", label: "Add Trade", icon: Sparkles },
   { to: "/app/review", label: "Weekly Review", icon: BarChart3 },

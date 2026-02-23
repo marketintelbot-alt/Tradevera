@@ -3,6 +3,9 @@ import {
   ASSET_CLASS_VALUES,
   DIRECTION_VALUES,
   PLAN_VALUES,
+  PROP_FIRM_ACCOUNT_SIZE_VALUES,
+  PROP_FIRM_DRAWDOWN_MODE_VALUES,
+  PROP_FIRM_PLATFORM_VALUES,
   PROJECT_STATUS_VALUES,
   RISK_TRIGGER_REASON_VALUES,
   SESSION_VALUES,
@@ -195,6 +198,40 @@ export const riskSettingsSchema = z.object({
 
 export const riskTriggerReasonSchema = z.enum(RISK_TRIGGER_REASON_VALUES);
 
+export const propFirmAccountSchema = z.object({
+  name: z.string().trim().min(1).max(120),
+  platform: z.enum(PROP_FIRM_PLATFORM_VALUES),
+  custom_platform_name: z.string().trim().max(120).nullable().optional(),
+  account_size: z.enum(PROP_FIRM_ACCOUNT_SIZE_VALUES).default("custom"),
+  is_copy_trading: z.boolean().optional(),
+  copy_group_key: z.string().trim().max(80).nullable().optional(),
+  copy_group_name: z.string().trim().max(120).nullable().optional(),
+  is_group_leader: z.boolean().optional(),
+  profit_target: optionalNumberFromInput({ min: 0 }).optional(),
+  max_position_size: numberFromInput({ min: 0 }).nullable().optional(),
+  daily_loss_limit: optionalNumberFromInput({ min: 0 }).optional(),
+  max_drawdown: optionalNumberFromInput({ min: 0 }).optional(),
+  drawdown_mode: z.enum(PROP_FIRM_DRAWDOWN_MODE_VALUES).optional(),
+  notes: z.string().trim().max(2000).nullable().optional()
+});
+
+export const propFirmAccountUpdateSchema = z.object({
+  name: z.string().trim().min(1).max(120).optional(),
+  platform: z.enum(PROP_FIRM_PLATFORM_VALUES).optional(),
+  custom_platform_name: z.string().trim().max(120).nullable().optional(),
+  account_size: z.enum(PROP_FIRM_ACCOUNT_SIZE_VALUES).optional(),
+  is_copy_trading: z.boolean().optional(),
+  copy_group_key: z.string().trim().max(80).nullable().optional(),
+  copy_group_name: z.string().trim().max(120).nullable().optional(),
+  is_group_leader: z.boolean().optional(),
+  profit_target: optionalNumberFromInput({ min: 0 }).optional(),
+  max_position_size: numberFromInput({ min: 0 }).nullable().optional(),
+  daily_loss_limit: optionalNumberFromInput({ min: 0 }).optional(),
+  max_drawdown: optionalNumberFromInput({ min: 0 }).optional(),
+  drawdown_mode: z.enum(PROP_FIRM_DRAWDOWN_MODE_VALUES).optional(),
+  notes: z.string().trim().max(2000).nullable().optional()
+});
+
 export type AuthRequestLinkInput = z.infer<typeof authRequestLinkSchema>;
 export type AuthConsumeInput = z.infer<typeof authConsumeSchema>;
 export type AuthPasswordLoginInput = z.infer<typeof authPasswordLoginSchema>;
@@ -209,3 +246,5 @@ export type TaskInput = z.infer<typeof taskSchema>;
 export type TaskUpdateInput = z.infer<typeof taskUpdateSchema>;
 export type TradeScreenshotInput = z.infer<typeof tradeScreenshotSchema>;
 export type RiskSettingsInput = z.infer<typeof riskSettingsSchema>;
+export type PropFirmAccountInput = z.infer<typeof propFirmAccountSchema>;
+export type PropFirmAccountUpdateInput = z.infer<typeof propFirmAccountUpdateSchema>;

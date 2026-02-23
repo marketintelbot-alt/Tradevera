@@ -5,10 +5,14 @@ import { Button } from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useAuth } from "@/context/AuthContext";
 import { AssistantPage } from "@/pages/app/AssistantPage";
+import { AccountabilityPage } from "@/pages/app/AccountabilityPage";
 import { DashboardPage } from "@/pages/app/DashboardPage";
 import { CalendarPage } from "@/pages/app/CalendarPage";
 import { NewTradePage } from "@/pages/app/NewTradePage";
+import { PrepPage } from "@/pages/app/PrepPage";
+import { PropFirmsPage } from "@/pages/app/PropFirmsPage";
 import { ProjectsPage } from "@/pages/app/ProjectsPage";
+import { PsychologyPage } from "@/pages/app/PsychologyPage";
 import { ReviewPage } from "@/pages/app/ReviewPage";
 import { SettingsPage } from "@/pages/app/SettingsPage";
 import { ToolsPage } from "@/pages/app/ToolsPage";
@@ -122,6 +126,10 @@ export default function App() {
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<DashboardPage />} />
         <Route path="calendar" element={<CalendarPage />} />
+        <Route path="prep" element={<PrepPage />} />
+        <Route path="psychology" element={<PsychologyPage />} />
+        <Route path="accountability" element={<AccountabilityPage />} />
+        <Route path="prop-firms" element={<PropFirmsPage />} />
         <Route path="assistant" element={<AssistantPage />} />
         <Route path="projects" element={<ProjectsPage />} />
         <Route path="trades" element={<TradesPage />} />

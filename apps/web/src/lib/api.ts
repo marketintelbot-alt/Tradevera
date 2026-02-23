@@ -2,6 +2,8 @@ import type {
   AiCoachResponse,
   CreateTradeResponse,
   MeResponse,
+  PropFirmAccount,
+  PropFirmAccountsResponse,
   Project,
   ProjectsResponse,
   RiskSettingsResponse,
@@ -439,6 +441,63 @@ export const api = {
 
   async listProjects(): Promise<ProjectsResponse> {
     return request("/api/projects", { method: "GET" });
+  },
+
+  async listPropFirmAccounts(): Promise<PropFirmAccountsResponse> {
+    return request("/api/prop-accounts", { method: "GET" });
+  },
+
+  async createPropFirmAccount(payload: {
+    name: string;
+    platform: "topstep" | "alpha_futures" | "lucid_trading" | "tradeify" | "apex_trader" | "take_profit_trader" | "my_funded_futures" | "custom";
+    custom_platform_name?: string | null;
+    account_size?: "50K" | "100K" | "150K" | "custom";
+    is_copy_trading?: boolean;
+    copy_group_key?: string | null;
+    copy_group_name?: string | null;
+    is_group_leader?: boolean;
+    profit_target?: number | null;
+    max_position_size?: number | null;
+    daily_loss_limit?: number | null;
+    max_drawdown?: number | null;
+    drawdown_mode?: "fixed" | "trailing";
+    notes?: string | null;
+  }): Promise<{ account: PropFirmAccount }> {
+    return request("/api/prop-accounts", {
+      method: "POST",
+      body: JSON.stringify(payload)
+    });
+  },
+
+  async updatePropFirmAccount(
+    id: string,
+    payload: {
+      name?: string;
+      platform?: "topstep" | "alpha_futures" | "lucid_trading" | "tradeify" | "apex_trader" | "take_profit_trader" | "my_funded_futures" | "custom";
+      custom_platform_name?: string | null;
+      account_size?: "50K" | "100K" | "150K" | "custom";
+      is_copy_trading?: boolean;
+      copy_group_key?: string | null;
+      copy_group_name?: string | null;
+      is_group_leader?: boolean;
+      profit_target?: number | null;
+      max_position_size?: number | null;
+      daily_loss_limit?: number | null;
+      max_drawdown?: number | null;
+      drawdown_mode?: "fixed" | "trailing";
+      notes?: string | null;
+    }
+  ): Promise<{ account: PropFirmAccount }> {
+    return request(`/api/prop-accounts/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(payload)
+    });
+  },
+
+  async deletePropFirmAccount(id: string): Promise<{ success: boolean }> {
+    return request(`/api/prop-accounts/${id}`, {
+      method: "DELETE"
+    });
   },
 
   async createProject(payload: {

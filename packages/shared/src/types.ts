@@ -22,6 +22,24 @@ export type TaskPriority = (typeof TASK_PRIORITY_VALUES)[number];
 export const RISK_TRIGGER_REASON_VALUES = ["daily_max_loss", "loss_streak", "combined"] as const;
 export type RiskTriggerReason = (typeof RISK_TRIGGER_REASON_VALUES)[number];
 
+export const PROP_FIRM_PLATFORM_VALUES = [
+  "topstep",
+  "alpha_futures",
+  "lucid_trading",
+  "tradeify",
+  "apex_trader",
+  "take_profit_trader",
+  "my_funded_futures",
+  "custom"
+] as const;
+export type PropFirmPlatform = (typeof PROP_FIRM_PLATFORM_VALUES)[number];
+
+export const PROP_FIRM_ACCOUNT_SIZE_VALUES = ["50K", "100K", "150K", "custom"] as const;
+export type PropFirmAccountSize = (typeof PROP_FIRM_ACCOUNT_SIZE_VALUES)[number];
+
+export const PROP_FIRM_DRAWDOWN_MODE_VALUES = ["fixed", "trailing"] as const;
+export type PropFirmDrawdownMode = (typeof PROP_FIRM_DRAWDOWN_MODE_VALUES)[number];
+
 export interface UserMe {
   id: string;
   email: string;
@@ -157,6 +175,31 @@ export interface RiskStatus {
 export interface RiskSettingsResponse {
   settings: RiskSettings;
   status: RiskStatus;
+}
+
+export interface PropFirmAccount {
+  id: string;
+  user_id: string;
+  name: string;
+  platform: PropFirmPlatform;
+  custom_platform_name: string | null;
+  account_size: PropFirmAccountSize;
+  is_copy_trading: boolean;
+  copy_group_key: string | null;
+  copy_group_name: string | null;
+  is_group_leader: boolean;
+  profit_target: number | null;
+  max_position_size: number | null;
+  daily_loss_limit: number | null;
+  max_drawdown: number | null;
+  drawdown_mode: PropFirmDrawdownMode;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PropFirmAccountsResponse {
+  accounts: PropFirmAccount[];
 }
 
 export interface AuthResponse {

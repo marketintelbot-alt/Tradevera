@@ -3,6 +3,7 @@ import { registerAiRoutes } from "./ai";
 import { authenticateRequest, registerAuthRoutes } from "./auth";
 import { registerMeRoutes } from "./me";
 import { registerProjectRoutes } from "./projects";
+import { registerPropAccountRoutes } from "./propAccounts";
 import { registerRiskRoutes } from "./risk";
 import { registerHealthRoute } from "./routes";
 import { registerStripeRoutes } from "./stripe";
@@ -12,7 +13,7 @@ import { isFreeExpired } from "./utils/plan";
 
 const PUBLIC_API_ROUTES = new Set(["/api/stripe/webhook", "/api/stripe/create-checkout-session"]);
 const FREE_EXEMPT_ROUTES = new Set(["/api/me", "/api/logout", "/api/stripe/create-checkout-session"]);
-const FREE_READ_ONLY_ROUTES = new Set(["/api/trades", "/api/projects", "/api/tasks"]);
+const FREE_READ_ONLY_ROUTES = new Set(["/api/trades", "/api/projects", "/api/tasks", "/api/prop-accounts"]);
 
 const app = new Hono<AppEnv>();
 
@@ -97,6 +98,7 @@ registerAuthRoutes(app);
 registerMeRoutes(app);
 registerTradeRoutes(app);
 registerProjectRoutes(app);
+registerPropAccountRoutes(app);
 registerRiskRoutes(app);
 registerAiRoutes(app);
 registerStripeRoutes(app);
