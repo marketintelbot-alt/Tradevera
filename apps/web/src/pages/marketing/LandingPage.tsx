@@ -96,7 +96,7 @@ export function LandingPage() {
               <div className="mt-4 grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-xs text-ink-200">Win rate</p>
-                  <p className="text-2xl font-semibold">62.5%</p>
+                  <p className="text-2xl font-semibold">78%</p>
                 </div>
                 <div>
                   <p className="text-xs text-ink-200">PnL</p>
