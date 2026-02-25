@@ -91,7 +91,7 @@ export function LandingPage() {
           </div>
 
           <div className="space-y-4">
-            <Card className="bg-ink-900 text-white">
+            <Card className="!border-ink-900 !bg-ink-900 text-white shadow-panel">
               <p className="text-xs uppercase tracking-[0.15em] text-ink-200">Today snapshot</p>
               <div className="mt-4 grid grid-cols-2 gap-4">
                 <div>
@@ -112,7 +112,7 @@ export function LandingPage() {
                 </div>
               </div>
             </Card>
-            <Card className="bg-gradient-to-br from-mint-100 to-white">
+            <Card className="!border-mint-200 !bg-gradient-to-br !from-mint-100 !to-white">
               <p className="flex items-center gap-2 text-sm font-semibold text-ink-900">
                 <Sparkles className="h-4 w-4" /> Weekly Review AI-style summary
               </p>
@@ -131,12 +131,20 @@ export function LandingPage() {
           <p className="mt-2 text-sm text-ink-700">
             Start free, grow into Starter, and unlock full Pro tooling when ready.
           </p>
-          <p className="mt-1 text-sm font-medium text-ink-900">Starter and Pro are 100% ad-free.</p>
+          <div className="mt-3 inline-flex flex-wrap items-center gap-2 rounded-full border border-ink-200 bg-white px-3 py-2 text-xs font-medium text-ink-800 shadow-soft">
+            <span>Cancel anytime</span>
+            <span className="h-1 w-1 rounded-full bg-ink-400" />
+            <span>Starter and Pro are 100% ad-free</span>
+            <span className="h-1 w-1 rounded-full bg-ink-400" />
+            <span>Upgrade in app without losing data</span>
+          </div>
+
           <div className="mt-5 grid gap-4 md:grid-cols-3">
             <Card>
               <h3 className="text-xl font-semibold text-ink-900">Free</h3>
               <p className="mt-1 text-sm text-ink-700">Perfect for getting started</p>
               <p className="mt-5 text-3xl font-semibold text-ink-900">$0</p>
+              <p className="mt-1 text-xs font-medium uppercase tracking-wide text-ink-700">No card required</p>
               <ul className="mt-4 space-y-2 text-sm text-ink-800">
                 <li>Up to 50 trades</li>
                 <li>Up to 50 days on Free</li>
@@ -150,13 +158,14 @@ export function LandingPage() {
                 <Button variant="secondary">Start on Free</Button>
               </Link>
             </Card>
-            <Card className="relative border-ink-900 shadow-panel">
-              <Badge tone="accent" className="absolute -top-3 left-5">
+            <Card className="relative !border-amber-400 bg-gradient-to-b from-amber-50 to-white shadow-[0_18px_45px_-24px_rgba(245,158,11,0.65)] ring-1 ring-amber-300/70">
+              <Badge tone="warning" className="absolute -top-3 left-5 border border-amber-500/40 bg-gradient-to-r from-amber-300 to-yellow-200 text-ink-950 shadow-soft">
                 Most popular
               </Badge>
               <h3 className="text-xl font-semibold text-ink-900">Starter</h3>
               <p className="mt-1 text-sm text-ink-700">For active traders building consistency</p>
               <p className="mt-5 text-3xl font-semibold text-ink-900">$9.99/mo</p>
+              <p className="mt-1 text-xs font-medium uppercase tracking-wide text-amber-700">Best value for most traders</p>
               <ul className="mt-4 space-y-2 text-sm text-ink-800">
                 <li>No ads</li>
                 <li>No 50-day/50-trade free caps</li>
@@ -167,13 +176,20 @@ export function LandingPage() {
                 <li>Upgrade to Pro any time</li>
               </ul>
               <Link to="/login" className="mt-5 inline-block">
-                <Button>Start Starter in app</Button>
+                <Button className="shadow-soft">Start Starter in app</Button>
               </Link>
             </Card>
-            <Card className="border-ink-900 bg-ink-900 text-white">
-              <h3 className="text-xl font-semibold">Pro</h3>
-              <p className="mt-1 text-sm text-ink-200">Built for traders who want full analytics and coaching tools</p>
-              <p className="mt-5 text-3xl font-semibold">$24.99/mo</p>
+            <Card className="!border-ink-900 !bg-ink-950 text-white shadow-panel">
+              <div className="inline-flex items-center gap-2">
+                <Badge tone="success" className="border border-mint-400/30 bg-mint-400/20 text-white">
+                  Pro
+                </Badge>
+                <span className="text-xs font-medium uppercase tracking-[0.14em] text-ink-200">Full analytics + AI</span>
+              </div>
+              <h3 className="mt-3 text-xl font-semibold text-white">Pro</h3>
+              <p className="mt-1 text-sm text-ink-100">Built for traders who want full analytics, coaching tools, and advanced review workflows</p>
+              <p className="mt-5 text-3xl font-semibold text-white">$24.99/mo</p>
+              <p className="mt-1 text-xs font-medium uppercase tracking-wide text-mint-300">Premium workflow + performance suite</p>
               <ul className="mt-4 space-y-2 text-sm text-ink-100">
                 <li>Unlimited trades</li>
                 <li>Everything in Starter</li>
@@ -184,9 +200,19 @@ export function LandingPage() {
                 <li>No ads</li>
               </ul>
               <Link to="/login" className="mt-5 inline-block">
-                <Button variant="secondary">Upgrade from app settings</Button>
+                <Button variant="secondary" className="border-white/20 bg-white text-ink-950 hover:bg-ink-100">
+                  Upgrade from app settings
+                </Button>
               </Link>
             </Card>
+          </div>
+
+          <div className="mt-5 rounded-2xl border border-ink-200 bg-gradient-to-r from-white via-ink-100/40 to-white p-4">
+            <p className="text-sm font-semibold text-ink-900">No migration friction</p>
+            <p className="mt-1 text-sm text-ink-700">
+              Start on Free and upgrade later without losing trades, tags, reviews, projects, or account history. Starter and Pro remove ads and unlock more of
+              Journal OS.
+            </p>
           </div>
         </section>
 
