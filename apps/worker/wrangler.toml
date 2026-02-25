@@ -4,8 +4,8 @@ compatibility_date = "2025-02-15"
 workers_dev = true
 
 [vars]
-FRONTEND_ORIGIN = "https://tradevera-web.onrender.com"
-APP_URL = "https://tradevera-web.onrender.com"
+FRONTEND_ORIGIN = "https://tradevera.org,https://www.tradevera.org,https://tradevera-web.onrender.com"
+APP_URL = "https://tradevera.org"
 
 [[d1_databases]]
 binding = "DB"
