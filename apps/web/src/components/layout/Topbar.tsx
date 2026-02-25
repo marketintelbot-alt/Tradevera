@@ -16,19 +16,19 @@ export function Topbar({ onMobileMenu }: TopbarProps) {
   const { theme, toggleTheme } = useTheme();
 
   return (
-    <header className="sticky top-0 z-20 border-b border-ink-200/70 bg-white/85 px-4 py-3 backdrop-blur-md sm:px-6">
+    <header className="sticky top-0 z-20 border-b border-ink-200/70 bg-white/85 px-4 py-3 backdrop-blur-md dark:border-ink-800 dark:bg-ink-950/85 sm:px-6">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <button
-            className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-ink-200 text-ink-800 lg:hidden"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-ink-200 text-ink-800 dark:border-ink-700 dark:text-ink-100 lg:hidden"
             onClick={onMobileMenu}
             type="button"
           >
             <Menu className="h-5 w-5" />
           </button>
           <div>
-            <p className="text-sm font-semibold text-ink-900">Trading workspace</p>
-            <p className="text-xs text-ink-700">{user?.email}</p>
+            <p className="text-sm font-semibold text-ink-900 dark:text-white">Trading workspace</p>
+            <p className="text-xs text-ink-700 dark:text-ink-200">Account details are available in Settings</p>
           </div>
         </div>
 
@@ -47,11 +47,17 @@ export function Topbar({ onMobileMenu }: TopbarProps) {
             <span className="hidden sm:inline">{theme === "dark" ? "Light" : "Dark"}</span>
           </Button>
           {user?.plan === "pro" ? (
-            <Badge tone="success">Pro</Badge>
+            <Badge tone="success" className="border border-mint-500/35 dark:border-mint-300 dark:bg-mint-400 dark:text-ink-950">
+              Pro
+            </Badge>
           ) : user?.plan === "starter" ? (
-            <Badge tone="accent">Starter</Badge>
+            <Badge tone="accent" className="border border-ink-900 dark:border-sky-300 dark:bg-sky-300 dark:text-ink-950">
+              Starter
+            </Badge>
           ) : (
-            <Badge tone="warning">Free</Badge>
+            <Badge tone="warning" className="border border-amber-500/35 dark:border-amber-300 dark:bg-amber-300 dark:text-ink-950">
+              Free
+            </Badge>
           )}
           {(user?.plan === "free" || user?.plan === "starter") && (
             <Link to="/app/settings">

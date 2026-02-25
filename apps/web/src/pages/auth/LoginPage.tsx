@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { CheckCircle2, Mail, RefreshCw, Sparkles } from "lucide-react";
+import { CheckCircle2, Info, Mail, RefreshCw, Sparkles } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -293,15 +293,26 @@ export function LoginPage() {
     <div className="flex min-h-screen items-center justify-center px-4 py-10">
       <Card className="w-full max-w-lg p-7">
         <p className="text-xs uppercase tracking-[0.16em] text-ink-700">Tradevera</p>
-        <h1 className="mt-2 text-3xl font-semibold text-ink-900">Login to Tradevera</h1>
-        <p className="mt-2 text-sm text-ink-700">Use magic link or sign in directly with your email and password.</p>
+        <h1 className="mt-2 text-3xl font-semibold text-ink-900">Create account or sign in</h1>
+        <p className="mt-2 text-sm text-ink-700">
+          New users start with a secure email link once. Returning users can use email + password or request a new link anytime.
+        </p>
+
+        <div className="mt-4 rounded-xl border border-ink-200 bg-ink-100/45 p-3">
+          <p className="text-sm font-semibold text-ink-900">Quick start (first time)</p>
+          <ol className="mt-2 space-y-1 text-xs leading-5 text-ink-800">
+            <li>1. Enter your email and click “Send secure sign-in link”.</li>
+            <li>2. Open the email and tap the link to create/sign in.</li>
+            <li>3. Tradevera can email you a password for faster future logins.</li>
+          </ol>
+        </div>
 
         <div className="mt-5">
           <Tabs
             activeKey={authMode}
             onChange={(value) => setAuthMode(value === "password" ? "password" : "magic")}
             tabs={[
-              { key: "magic", label: "Magic link" },
+              { key: "magic", label: "Email link" },
               { key: "password", label: "Password login" }
             ]}
           />
@@ -324,8 +335,12 @@ export function LoginPage() {
               loading={loading}
               variant={sent && !loading ? "success" : "primary"}
             >
-              {sent && !loading ? "Link sent. Click to resend" : "Send login link"}
+              {sent && !loading ? "Link sent. Click to resend" : "Send secure sign-in link"}
             </Button>
+
+            <p className="text-xs text-ink-700">
+              We will create your account automatically if this email is new. No credit card is required to start on Free.
+            </p>
           </form>
         ) : (
           <form className="mt-6 space-y-4" onSubmit={submitPassword}>
@@ -358,7 +373,7 @@ export function LoginPage() {
               Email me a password
             </Button>
             <p className="text-xs text-ink-700">
-              First-time users: complete a magic-link login once and Tradevera will send your password to this email.
+              First-time users: complete one email-link login first. Then Tradevera can send your password to this email.
             </p>
           </form>
         )}
@@ -430,6 +445,16 @@ export function LoginPage() {
         <p className="mt-4 text-sm text-ink-700">
           Need context first? <Link to="/" className="font-semibold text-ink-900 underline">See product overview</Link>
         </p>
+
+        <div className="mt-4 rounded-xl border border-ink-200 bg-white px-3 py-3 text-xs leading-5 text-ink-700">
+          <p className="inline-flex items-center gap-1.5 font-semibold text-ink-900">
+            <Info className="h-3.5 w-3.5" />
+            Important information
+          </p>
+          <p className="mt-1">
+            Tradevera is a journaling and analytics tool only. It does not provide financial advice, trade signals, or investment recommendations.
+          </p>
+        </div>
       </Card>
     </div>
   );

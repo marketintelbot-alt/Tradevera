@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { ArrowRight, Check, Sparkles } from "lucide-react";
+import { AlertTriangle, ArrowRight, Check, Shield, Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
 import { MarketingNav } from "@/components/layout/MarketingNav";
 import { Badge } from "@/components/ui/Badge";
@@ -9,6 +9,7 @@ import { useTheme } from "@/context/ThemeContext";
 
 const features = [
   "Fast trade capture with quick-add and advanced forms",
+  "Prep, psychology, accountability, and prop-firm account workflows in one Journal OS",
   "Projects + tasks command center for process execution",
   "Trader-grade analytics with streaks, drawdown, and setup edge",
   "AI Assistant coaching with personalized action items (Pro only)",
@@ -51,12 +52,15 @@ export function LandingPage() {
               Tradevera turns raw trades into a performance system.
             </h1>
             <p className="mt-4 max-w-2xl text-lg leading-8 text-ink-700">
-              Journal faster, review smarter, and stay accountable with metrics that expose your edge by setup, session, and behavior.
+              Track trades, review performance, and build consistency with a clean trading journal built for real execution workflows.
+            </p>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-ink-700">
+              New to Tradevera? Start with your email only. Tradevera creates your account automatically and guides you through your first login.
             </p>
             <div className="mt-7 flex flex-wrap items-center gap-3">
               <Link to="/login">
                 <Button size="lg" className="gap-2">
-                  Start free <ArrowRight className="h-4 w-4" />
+                  Start free (email only) <ArrowRight className="h-4 w-4" />
                 </Button>
               </Link>
               <Link to="/login">
@@ -65,6 +69,15 @@ export function LandingPage() {
                 </Button>
               </Link>
               <span className="text-sm text-ink-700">No credit card required. Free includes cloud sync up to 50 trades for up to 50 days.</span>
+            </div>
+
+            <div className="mt-6 rounded-2xl border border-ink-200 bg-ink-100/45 p-4">
+              <p className="text-sm font-semibold text-ink-900">How sign up works (simple)</p>
+              <ol className="mt-2 space-y-1 text-sm text-ink-800">
+                <li>1. Enter your email and request a secure login link.</li>
+                <li>2. Click the link in your inbox to create/sign in to your account.</li>
+                <li>3. Tradevera can email you a password for faster future logins.</li>
+              </ol>
             </div>
 
             <ul className="mt-8 grid gap-2 sm:grid-cols-2">
@@ -133,8 +146,14 @@ export function LandingPage() {
                 <li>Subtle ads on dashboard/list views</li>
                 <li>AI Assistant locked (upgrade to Pro)</li>
               </ul>
+              <Link to="/login" className="mt-5 inline-block">
+                <Button variant="secondary">Start on Free</Button>
+              </Link>
             </Card>
-            <Card>
+            <Card className="relative border-ink-900 shadow-panel">
+              <Badge tone="accent" className="absolute -top-3 left-5">
+                Most popular
+              </Badge>
               <h3 className="text-xl font-semibold text-ink-900">Starter</h3>
               <p className="mt-1 text-sm text-ink-700">For active traders building consistency</p>
               <p className="mt-5 text-3xl font-semibold text-ink-900">$9.99/mo</p>
@@ -142,17 +161,22 @@ export function LandingPage() {
                 <li>No ads</li>
                 <li>No 50-day/50-trade free caps</li>
                 <li>Cloud sync across devices</li>
-                <li>Core dashboard + journaling workflows</li>
+                <li>Core dashboard + Journal OS workflows</li>
+                <li>Prep, Psychology, Accountability, Prop Firms</li>
                 <li>Projects + tasks workspace</li>
                 <li>Upgrade to Pro any time</li>
               </ul>
+              <Link to="/login" className="mt-5 inline-block">
+                <Button>Start Starter in app</Button>
+              </Link>
             </Card>
             <Card className="border-ink-900 bg-ink-900 text-white">
               <h3 className="text-xl font-semibold">Pro</h3>
-              <p className="mt-1 text-sm text-ink-200">Built for consistent performance</p>
-              <p className="mt-5 text-3xl font-semibold">Your Stripe price</p>
+              <p className="mt-1 text-sm text-ink-200">Built for traders who want full analytics and coaching tools</p>
+              <p className="mt-5 text-3xl font-semibold">$24.99/mo</p>
               <ul className="mt-4 space-y-2 text-sm text-ink-100">
                 <li>Unlimited trades</li>
+                <li>Everything in Starter</li>
                 <li>Projects + tasks workspace</li>
                 <li>Profit factor, expectancy, drawdown, rolling win rate</li>
                 <li>AI Assistant with trade-data coaching</li>
@@ -165,6 +189,37 @@ export function LandingPage() {
             </Card>
           </div>
         </section>
+
+        <section className="mt-10 grid gap-4 lg:grid-cols-[1.1fr,0.9fr]">
+          <Card className="border-amber-500/30 bg-amber-100/40">
+            <p className="inline-flex items-center gap-2 text-sm font-semibold text-ink-900">
+              <AlertTriangle className="h-4 w-4 text-amber-500" />
+              Important: Tradevera is not financial advice
+            </p>
+            <p className="mt-2 text-sm leading-6 text-ink-800">
+              Tradevera is journaling, analytics, and workflow software. It does not provide investment recommendations, trade signals, or financial advice.
+              You are solely responsible for your trading decisions and risk management.
+            </p>
+          </Card>
+
+          <Card className="border-mint-500/25 bg-mint-100/35">
+            <p className="inline-flex items-center gap-2 text-sm font-semibold text-ink-900">
+              <Shield className="h-4 w-4 text-mint-500" />
+              Platform and risk disclosure
+            </p>
+            <p className="mt-2 text-sm leading-6 text-ink-800">
+              Trading futures, options, forex, and crypto involves substantial risk and may not be suitable for all users. Past performance analytics in Tradevera
+              do not guarantee future results.
+            </p>
+          </Card>
+        </section>
+
+        <footer className="mt-10 border-t border-ink-200 pt-6">
+          <p className="text-xs leading-5 text-ink-700">
+            Tradevera is a productivity and analytics tool for trade journaling and review. Not a broker, not a financial advisor, and not a provider of
+            investment advice. Use of the platform does not replace your own due diligence or professional advice where applicable.
+          </p>
+        </footer>
       </main>
     </div>
   );
