@@ -37,7 +37,7 @@ interface DayBucket {
 }
 
 type CalendarEventType = "fomc" | "cpi" | "earnings";
-type CalendarEventSource = "manual" | "detected";
+type CalendarEventSource = "manual" | "detected" | "builtin";
 
 interface CalendarEvent {
   id: string;
@@ -84,6 +84,59 @@ const EVENT_META: Record<CalendarEventType, { label: string; short: string; dot:
 };
 
 const DEFAULT_EVENT_TOGGLES: EventToggleState = { fomc: true, cpi: true, earnings: true };
+
+const BUILTIN_FOMC_DATES = [
+  "2025-01-29",
+  "2025-03-19",
+  "2025-05-07",
+  "2025-06-18",
+  "2025-07-30",
+  "2025-09-17",
+  "2025-10-29",
+  "2025-12-10",
+  "2026-01-28",
+  "2026-03-18",
+  "2026-04-29",
+  "2026-06-17",
+  "2026-07-29",
+  "2026-09-16",
+  "2026-10-28",
+  "2026-12-09"
+] as const;
+
+// Official BLS CPI release schedule dates currently available on the 2026 CPI page.
+const BUILTIN_CPI_RELEASE_DATES = [
+  "2025-12-10",
+  "2026-01-15",
+  "2026-02-18",
+  "2026-03-12",
+  "2026-04-15",
+  "2026-05-12",
+  "2026-06-11",
+  "2026-07-15",
+  "2026-08-12",
+  "2026-09-11",
+  "2026-10-15",
+  "2026-11-13",
+  "2026-12-10"
+] as const;
+
+const BUILTIN_MACRO_EVENTS: CalendarEvent[] = [
+  ...BUILTIN_FOMC_DATES.map((date) => ({
+    id: `builtin:fomc:${date}`,
+    date,
+    type: "fomc" as const,
+    title: "FOMC decision day",
+    source: "builtin" as const
+  })),
+  ...BUILTIN_CPI_RELEASE_DATES.map((date) => ({
+    id: `builtin:cpi:${date}`,
+    date,
+    type: "cpi" as const,
+    title: "CPI release (8:30 AM ET)",
+    source: "builtin" as const
+  }))
+];
 
 function dayKey(date: Date): string {
   return format(date, "yyyy-MM-dd");
@@ -135,7 +188,7 @@ export function CalendarPage() {
     DEFAULT_EVENT_TOGGLES
   );
   const [eventDraft, setEventDraft] = useState<EventDraft>({
-    type: "fomc",
+    type: "earnings",
     title: "",
     symbol: ""
   });
@@ -238,7 +291,13 @@ export function CalendarPage() {
   }, [trades]);
 
   const allCalendarEvents = useMemo<CalendarEvent[]>(() => {
-    const merged = [...manualEvents, ...detectedEarningsEvents];
+    const manualSignatures = new Set(manualEvents.map((event) => `${event.date}:${event.type}:${(event.symbol ?? "").toUpperCase()}`));
+    const builtinsWithoutManualDuplicates = BUILTIN_MACRO_EVENTS.filter((event) => {
+      const signature = `${event.date}:${event.type}:`;
+      return !manualSignatures.has(signature);
+    });
+
+    const merged = [...builtinsWithoutManualDuplicates, ...manualEvents, ...detectedEarningsEvents];
     return merged
       .filter((event) => eventToggles[event.type])
       .sort((a, b) => a.date.localeCompare(b.date) || a.type.localeCompare(b.type));
@@ -538,7 +597,7 @@ export function CalendarPage() {
               <span className="text-[11px] text-ink-200">{monthEventCounts[type]}</span>
             </button>
           ))}
-          <span className="text-xs text-ink-200">Add/edit macro and earnings events from the side panel.</span>
+          <span className="text-xs text-ink-200">FOMC and CPI load automatically. Use the side panel only for custom overrides or extra earnings events.</span>
         </div>
       </section>
 
@@ -730,7 +789,7 @@ export function CalendarPage() {
           </Card>
 
           <Card>
-            <CardHeader title="Event Overlays" subtitle="Track FOMC, CPI, and earnings catalysts directly on the PnL calendar." />
+            <CardHeader title="Event Overlays" subtitle="FOMC and CPI are preloaded automatically. Earnings are auto-detected from your trade notes and can be supplemented manually." />
 
             <div className="space-y-3">
               <div className="grid gap-2 sm:grid-cols-3">
@@ -753,9 +812,9 @@ export function CalendarPage() {
               </div>
 
               <div className="rounded-xl border border-ink-200 bg-ink-100/35 p-3">
-                <p className="text-sm font-semibold text-ink-900">Add event to {format(selectedDate, "MMM d, yyyy")}</p>
+                <p className="text-sm font-semibold text-ink-900">Optional custom event for {format(selectedDate, "MMM d, yyyy")}</p>
                 <p className="mt-1 text-xs text-ink-700">
-                  Macro dates are user-editable by design. Earnings can also be auto-detected from trade notes/setup fields containing “earnings”.
+                  Macro events are already loaded. Use this only for custom events or firm-specific catalysts. Earnings are also auto-detected from notes/setup fields containing “earnings”.
                 </p>
                 <div className="mt-3 grid gap-3">
                   <label className="flex flex-col gap-2">

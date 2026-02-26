@@ -84,7 +84,7 @@ export function AppLayout() {
       <div className="flex min-h-screen flex-1 flex-col">
         <Topbar onMobileMenu={() => setMobileOpen((current) => !current)} />
         {mobileOpen && (
-          <nav className="border-b border-ink-200 bg-white p-3 lg:hidden">
+          <nav className="border-b border-ink-200 bg-white/90 p-3 backdrop-blur-sm dark:border-ink-700 dark:bg-ink-950/90 lg:hidden">
             <div className="grid grid-cols-3 gap-2">
               {navItems.map((item) => (
                 <NavLink
@@ -94,7 +94,9 @@ export function AppLayout() {
                   className={({ isActive }) =>
                     cn(
                       "rounded-lg px-3 py-2 text-center text-xs font-semibold",
-                      isActive ? "bg-ink-900 text-white" : "bg-ink-100 text-ink-900"
+                      isActive
+                        ? "bg-ink-900 text-white dark:bg-mint-400 dark:text-ink-950"
+                        : "bg-ink-100 text-ink-900 dark:bg-ink-800 dark:text-ink-100"
                     )
                   }
                 >
@@ -105,7 +107,7 @@ export function AppLayout() {
           </nav>
         )}
 
-        <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 lg:py-8">
+        <main className="mx-auto w-full max-w-[92rem] flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
           <Outlet />
         </main>
       </div>
@@ -113,7 +115,7 @@ export function AppLayout() {
       {showQuickAddFab && (
         <button
           type="button"
-          className="fixed bottom-5 right-4 z-40 inline-flex items-center gap-2 rounded-full bg-ink-900 px-4 py-3 text-sm font-semibold text-white shadow-panel lg:hidden"
+          className="fixed bottom-5 right-4 z-40 inline-flex items-center gap-2 rounded-full bg-ink-900 px-4 py-3 text-sm font-semibold text-white shadow-panel dark:bg-mint-400 dark:text-ink-950 lg:hidden"
           onClick={() => setQuickAddOpen(true)}
         >
           <Sparkles className="h-4 w-4" />

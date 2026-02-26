@@ -232,10 +232,10 @@ export function FocusTimer() {
       </Button>
 
       {open ? (
-        <div className="absolute right-0 top-12 z-40 w-[320px] rounded-xl border border-ink-200 bg-white p-4 shadow-panel">
-          <p className="text-xs uppercase tracking-[0.12em] text-ink-700">Focus Timer</p>
-          <p className="mt-2 text-3xl font-semibold text-ink-900">{formatRemaining(remainingSec)}</p>
-          <p className="mt-1 text-xs text-ink-700">
+        <div className="absolute right-0 top-12 z-40 w-[320px] rounded-xl border border-ink-200 bg-white p-4 shadow-panel dark:border-ink-700 dark:bg-ink-900">
+          <p className="text-xs uppercase tracking-[0.12em] text-ink-700 dark:text-ink-200">Focus Timer</p>
+          <p className="mt-2 text-3xl font-semibold text-ink-900 dark:text-white">{formatRemaining(remainingSec)}</p>
+          <p className="mt-1 text-xs text-ink-700 dark:text-ink-200">
             {isRunning
               ? "Running now"
               : isPaused
@@ -261,14 +261,14 @@ export function FocusTimer() {
           </div>
 
           <div className="mt-3">
-            <label className="text-xs text-ink-700">Custom minutes</label>
+            <label className="text-xs text-ink-700 dark:text-ink-200">Custom minutes</label>
             <input
               type="number"
               min={1}
               max={240}
               value={customMinutes}
               onChange={(event) => setCustomMinutes(event.target.value)}
-              className="mt-1 h-10 w-full rounded-lg border border-ink-200 bg-white px-3 text-sm text-ink-900 outline-none transition focus:border-ink-700 focus:ring-4 focus:ring-ink-200/70"
+              className="mt-1 h-10 w-full rounded-lg border border-ink-200 bg-white px-3 text-sm text-ink-900 outline-none transition focus:border-ink-700 focus:ring-4 focus:ring-ink-200/70 dark:border-ink-700 dark:bg-ink-950 dark:text-white dark:focus:border-mint-400 dark:focus:ring-mint-400/20"
             />
           </div>
 

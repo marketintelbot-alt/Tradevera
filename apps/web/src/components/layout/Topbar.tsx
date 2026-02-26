@@ -16,7 +16,7 @@ export function Topbar({ onMobileMenu }: TopbarProps) {
   const { theme, toggleTheme } = useTheme();
 
   return (
-    <header className="sticky top-0 z-20 border-b border-ink-200/70 bg-white/85 px-4 py-3 backdrop-blur-md dark:border-ink-800 dark:bg-ink-950/85 sm:px-6">
+    <header className="sticky top-0 z-20 border-b border-ink-200/70 bg-white/85 px-4 py-3 backdrop-blur-md dark:border-ink-800/80 dark:bg-ink-950/92 sm:px-6">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <button
@@ -27,19 +27,19 @@ export function Topbar({ onMobileMenu }: TopbarProps) {
             <Menu className="h-5 w-5" />
           </button>
           <div>
-            <p className="text-sm font-semibold text-ink-900 dark:text-white">Trading workspace</p>
+            <p className="text-sm font-semibold tracking-tight text-ink-900 dark:text-white">Trading workspace</p>
             <p className="text-xs text-ink-700 dark:text-ink-200">Account details are available in Settings</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 rounded-xl border border-ink-200/80 bg-white/70 px-2 py-1.5 shadow-soft dark:border-ink-700 dark:bg-ink-900/70">
           <InstallAppButton />
           <FocusTimer />
           <Button
             variant="ghost"
             size="sm"
             onClick={toggleTheme}
-            className="gap-2"
+            className="gap-2 dark:text-white"
             aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
             title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
           >
@@ -66,7 +66,7 @@ export function Topbar({ onMobileMenu }: TopbarProps) {
               </Button>
             </Link>
           )}
-          <Button variant="ghost" size="sm" onClick={logout}>
+          <Button variant="ghost" size="sm" onClick={logout} className="dark:text-white">
             Logout
           </Button>
         </div>

@@ -19,13 +19,14 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
     <button
       ref={ref}
       className={cn(
-        "inline-flex items-center justify-center gap-2 rounded-lg font-semibold transition active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-700/40 disabled:cursor-not-allowed disabled:opacity-60",
+        "inline-flex items-center justify-center gap-2 rounded-lg font-semibold transition active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-700/40 disabled:cursor-not-allowed disabled:opacity-60 dark:focus-visible:ring-ink-200/30",
         size === "sm" && "h-9 px-3 text-sm",
         size === "md" && "h-10 px-4 text-sm",
         size === "lg" && "h-12 px-5 text-base",
-        variant === "primary" && "bg-ink-900 text-white hover:bg-ink-800",
-        variant === "secondary" && "border border-ink-200 bg-white text-ink-900 hover:bg-ink-100",
-        variant === "ghost" && "text-ink-800 hover:bg-ink-100",
+        variant === "primary" && "bg-ink-900 text-white hover:bg-ink-800 dark:bg-mint-400 dark:text-ink-950 dark:hover:bg-mint-500",
+        variant === "secondary" &&
+          "border border-ink-200 bg-white text-ink-900 hover:bg-ink-100 dark:border-ink-700 dark:bg-ink-900 dark:text-ink-100 dark:hover:bg-ink-800",
+        variant === "ghost" && "text-ink-800 hover:bg-ink-100 dark:text-ink-100 dark:hover:bg-ink-800",
         variant === "danger" && "bg-coral-500 text-white hover:bg-coral-500/90",
         variant === "success" &&
           "bg-gradient-to-r from-mint-500 to-emerald-500 text-white shadow-[0_12px_30px_-12px_rgba(16,185,129,0.75)] hover:brightness-105",

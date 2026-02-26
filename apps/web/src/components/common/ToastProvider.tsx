@@ -45,16 +45,16 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             <div
               key={item.id}
               className={cn(
-                "flex items-start gap-3 rounded-xl border bg-white p-4 shadow-panel transition",
-                item.tone === "success" && "border-mint-500/40",
-                item.tone === "error" && "border-coral-500/40",
-                item.tone === "info" && "border-ink-200"
+                "flex items-start gap-3 rounded-xl border bg-white p-4 shadow-panel transition dark:bg-ink-900/95 dark:shadow-[0_14px_32px_rgba(0,0,0,0.35)]",
+                item.tone === "success" && "border-mint-500/40 dark:border-mint-400/30",
+                item.tone === "error" && "border-coral-500/40 dark:border-coral-500/35",
+                item.tone === "info" && "border-ink-200 dark:border-ink-700"
               )}
             >
-              <Icon className="mt-0.5 h-5 w-5 text-ink-700" />
+              <Icon className="mt-0.5 h-5 w-5 text-ink-700 dark:text-ink-200" />
               <div className="space-y-1">
-                <p className="text-sm font-semibold text-ink-900">{item.title}</p>
-                {item.description && <p className="text-xs leading-5 text-ink-700">{item.description}</p>}
+                <p className="text-sm font-semibold text-ink-900 dark:text-white">{item.title}</p>
+                {item.description && <p className="text-xs leading-5 text-ink-700 dark:text-ink-200">{item.description}</p>}
               </div>
             </div>
           );
