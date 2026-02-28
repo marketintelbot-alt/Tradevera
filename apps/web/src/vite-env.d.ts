@@ -2,6 +2,7 @@
 
 interface ImportMetaEnv {
   readonly VITE_API_BASE_URL: string;
+  readonly VITE_APP_ADS_ENABLED?: string;
   readonly VITE_ADSENSE_CLIENT_ID?: string;
   readonly VITE_ADSENSE_SLOT_DASHBOARD?: string;
   readonly VITE_ADSENSE_SLOT_TRADES?: string;

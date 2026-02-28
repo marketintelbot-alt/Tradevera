@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { useAuth } from "@/context/AuthContext";
-import { ADSENSE_CLIENT_ID, ADSENSE_ENABLED, getAdSlotId, type AdPlacement } from "@/lib/ads";
+import { ADSENSE_CLIENT_ID, ADSENSE_ENABLED, APP_ADS_ENABLED, getAdSlotId, type AdPlacement } from "@/lib/ads";
 
 declare global {
   interface Window {
@@ -111,7 +111,7 @@ export function AdSlot({ compact = false, placement = "dashboard" }: AdSlotProps
     }
   }, [canRenderGoogleAd, slotId]);
 
-  if (!isFreePlan) {
+  if (!APP_ADS_ENABLED || !isFreePlan) {
     return null;
   }
 

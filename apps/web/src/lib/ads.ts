@@ -7,7 +7,8 @@ function clean(value: string | undefined): string {
 }
 
 export const ADSENSE_CLIENT_ID = clean(import.meta.env.VITE_ADSENSE_CLIENT_ID) || FALLBACK_ADSENSE_CLIENT_ID;
-export const ADSENSE_ENABLED = ADSENSE_CLIENT_ID.length > 0;
+export const APP_ADS_ENABLED = clean(import.meta.env.VITE_APP_ADS_ENABLED).toLowerCase() === "true";
+export const ADSENSE_ENABLED = APP_ADS_ENABLED && ADSENSE_CLIENT_ID.length > 0;
 
 const AD_SLOT_BY_PLACEMENT: Record<AdPlacement, string> = {
   dashboard: clean(import.meta.env.VITE_ADSENSE_SLOT_DASHBOARD),

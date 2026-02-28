@@ -1,11 +1,13 @@
 import { useEffect, useRef } from "react";
 import { AlertTriangle, ArrowRight, Check, Shield, Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
+import { MarketingFooter } from "@/components/layout/MarketingFooter";
 import { MarketingNav } from "@/components/layout/MarketingNav";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { useTheme } from "@/context/ThemeContext";
+import { useMarketingAdSense } from "@/lib/marketingAds";
 
 const features = [
   "Fast trade capture with quick-add and advanced forms",
@@ -20,6 +22,7 @@ const features = [
 export function LandingPage() {
   const { theme, setTheme } = useTheme();
   const previousThemeRef = useRef<"light" | "dark" | null>(null);
+  useMarketingAdSense();
 
   useEffect(() => {
     const root = document.documentElement;
@@ -240,12 +243,34 @@ export function LandingPage() {
           </Card>
         </section>
 
-        <footer className="mt-10 border-t border-ink-200 pt-6">
-          <p className="text-xs leading-5 text-ink-700">
-            Tradevera is a productivity and analytics tool for trade journaling and review. Not a broker, not a financial advisor, and not a provider of
-            investment advice. Use of the platform does not replace your own due diligence or professional advice where applicable.
-          </p>
-        </footer>
+        <section className="mt-10 grid gap-4 md:grid-cols-3">
+          <Card>
+            <p className="text-xs uppercase tracking-[0.12em] text-ink-700">Education</p>
+            <h3 className="mt-2 text-lg font-semibold text-ink-900">Trade Journal System</h3>
+            <p className="mt-2 text-sm leading-6 text-ink-800">Build repeatable capture and review workflows with clear decision logs.</p>
+            <Link className="mt-3 inline-block text-sm font-semibold text-ink-900 underline decoration-mint-500 decoration-2" to="/resources/trade-journal-system">
+              Read guide
+            </Link>
+          </Card>
+          <Card>
+            <p className="text-xs uppercase tracking-[0.12em] text-ink-700">Education</p>
+            <h3 className="mt-2 text-lg font-semibold text-ink-900">Weekly Review Playbook</h3>
+            <p className="mt-2 text-sm leading-6 text-ink-800">Turn your week into one focused plan instead of scattered adjustments.</p>
+            <Link className="mt-3 inline-block text-sm font-semibold text-ink-900 underline decoration-mint-500 decoration-2" to="/resources/weekly-review-playbook">
+              Read guide
+            </Link>
+          </Card>
+          <Card>
+            <p className="text-xs uppercase tracking-[0.12em] text-ink-700">Education</p>
+            <h3 className="mt-2 text-lg font-semibold text-ink-900">Risk Checklist</h3>
+            <p className="mt-2 text-sm leading-6 text-ink-800">Use pre-session and post-session controls to reduce emotional risk drift.</p>
+            <Link className="mt-3 inline-block text-sm font-semibold text-ink-900 underline decoration-mint-500 decoration-2" to="/resources/risk-journal-checklist">
+              Read guide
+            </Link>
+          </Card>
+        </section>
+
+        <MarketingFooter />
       </main>
     </div>
   );

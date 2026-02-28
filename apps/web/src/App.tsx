@@ -19,7 +19,16 @@ import { ToolsPage } from "@/pages/app/ToolsPage";
 import { TradesPage } from "@/pages/app/TradesPage";
 import { AuthCallbackPage } from "@/pages/auth/AuthCallbackPage";
 import { LoginPage } from "@/pages/auth/LoginPage";
+import { AboutPage } from "@/pages/marketing/AboutPage";
+import { ContactPage } from "@/pages/marketing/ContactPage";
+import { EditorialPolicyPage } from "@/pages/marketing/EditorialPolicyPage";
 import { LandingPage } from "@/pages/marketing/LandingPage";
+import { PrivacyPage } from "@/pages/marketing/PrivacyPage";
+import { ResourcesPage } from "@/pages/marketing/ResourcesPage";
+import { RiskJournalChecklistPage } from "@/pages/marketing/RiskJournalChecklistPage";
+import { TermsPage } from "@/pages/marketing/TermsPage";
+import { TradeJournalSystemPage } from "@/pages/marketing/TradeJournalSystemPage";
+import { WeeklyReviewPlaybookPage } from "@/pages/marketing/WeeklyReviewPlaybookPage";
 
 function ProtectedShell() {
   const { user, loading, refreshMe } = useAuth();
@@ -119,6 +128,15 @@ export default function App() {
   return (
     <Routes>
       <Route path="/" element={<LandingPage />} />
+      <Route path="/resources" element={<ResourcesPage />} />
+      <Route path="/resources/trade-journal-system" element={<TradeJournalSystemPage />} />
+      <Route path="/resources/weekly-review-playbook" element={<WeeklyReviewPlaybookPage />} />
+      <Route path="/resources/risk-journal-checklist" element={<RiskJournalChecklistPage />} />
+      <Route path="/about" element={<AboutPage />} />
+      <Route path="/contact" element={<ContactPage />} />
+      <Route path="/privacy" element={<PrivacyPage />} />
+      <Route path="/terms" element={<TermsPage />} />
+      <Route path="/editorial-policy" element={<EditorialPolicyPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/auth/callback" element={<AuthCallbackPage />} />
 

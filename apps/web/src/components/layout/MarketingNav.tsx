@@ -8,6 +8,17 @@ export function MarketingNav() {
         <Link to="/" className="text-lg font-bold tracking-tight text-ink-900">
           Tradevera
         </Link>
+        <nav className="hidden items-center gap-2 md:flex">
+          <Link className="rounded-full px-3 py-1 text-xs font-semibold text-ink-800 hover:bg-ink-100" to="/resources">
+            Resources
+          </Link>
+          <Link className="rounded-full px-3 py-1 text-xs font-semibold text-ink-800 hover:bg-ink-100" to="/about">
+            About
+          </Link>
+          <Link className="rounded-full px-3 py-1 text-xs font-semibold text-ink-800 hover:bg-ink-100" to="/contact">
+            Contact
+          </Link>
+        </nav>
         <div className="flex items-center gap-2">
           <Link to="/login">
             <Button variant="ghost" size="sm">
