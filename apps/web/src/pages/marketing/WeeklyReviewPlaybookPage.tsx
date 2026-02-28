@@ -2,6 +2,7 @@ import { MarketingFooter } from "@/components/layout/MarketingFooter";
 import { MarketingNav } from "@/components/layout/MarketingNav";
 import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
+import { LAST_UPDATED_LABEL } from "@/lib/lastUpdated";
 import { useMarketingAdSense } from "@/lib/marketingAds";
 
 export function WeeklyReviewPlaybookPage() {
@@ -56,7 +57,7 @@ export function WeeklyReviewPlaybookPage() {
               <li>Ignoring adherence data because PnL was green.</li>
               <li>Adding multiple new rules in one week.</li>
             </ul>
-            <p className="mt-3 text-xs text-ink-700">Last reviewed: February 28, 2026.</p>
+            <p className="mt-3 text-xs text-ink-700">Last reviewed: {LAST_UPDATED_LABEL}.</p>
           </Card>
         </section>
 

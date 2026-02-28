@@ -2,6 +2,7 @@ import { MarketingFooter } from "@/components/layout/MarketingFooter";
 import { MarketingNav } from "@/components/layout/MarketingNav";
 import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
+import { LAST_UPDATED_LABEL } from "@/lib/lastUpdated";
 import { useMarketingAdSense } from "@/lib/marketingAds";
 
 export function RiskJournalChecklistPage() {
@@ -56,7 +57,7 @@ export function RiskJournalChecklistPage() {
           <p className="mt-2 text-sm leading-6 text-ink-800">
             Track your checklist completion as a weekly score. Improvement in checklist discipline usually leads risk stability before it leads immediate PnL changes.
           </p>
-          <p className="mt-3 text-xs text-ink-700">Last reviewed: February 28, 2026.</p>
+          <p className="mt-3 text-xs text-ink-700">Last reviewed: {LAST_UPDATED_LABEL}.</p>
         </section>
 
         <MarketingFooter />

@@ -2,6 +2,7 @@ import { MarketingFooter } from "@/components/layout/MarketingFooter";
 import { MarketingNav } from "@/components/layout/MarketingNav";
 import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
+import { LAST_UPDATED_LABEL } from "@/lib/lastUpdated";
 import { useMarketingAdSense } from "@/lib/marketingAds";
 
 export function TradeJournalSystemPage() {
@@ -63,7 +64,7 @@ export function TradeJournalSystemPage() {
               Run a 20-30 minute review at week end. Focus on one setup, one mistake cluster, and one rule to improve. Overloading your action list usually leads to zero
               implementation.
             </p>
-            <p className="mt-3 text-xs text-ink-700">Last reviewed: February 28, 2026.</p>
+            <p className="mt-3 text-xs text-ink-700">Last reviewed: {LAST_UPDATED_LABEL}.</p>
           </Card>
         </section>
 

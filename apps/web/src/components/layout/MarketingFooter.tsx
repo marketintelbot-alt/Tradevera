@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { LAST_UPDATED_LABEL } from "@/lib/lastUpdated";
 
 export function MarketingFooter() {
   return (
@@ -33,7 +34,7 @@ export function MarketingFooter() {
         </Link>
       </div>
       <p className="mt-4 text-xs leading-5 text-ink-700">
-        Tradevera is journaling and analytics software for trading performance review. Not financial advice. Last content update: February 28, 2026.
+        Tradevera is journaling and analytics software for trading performance review. Not financial advice. Last content update: {LAST_UPDATED_LABEL}.
       </p>
     </footer>
   );
